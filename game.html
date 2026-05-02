@@ -1,0 +1,3435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zupwin - Color Prediction</title>
+
+    <meta name="theme-color" content="#111827">
+    <meta name="description" content="Zupwin - Play Color Prediction and Mine games to win real money!">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.avif">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Zupwin">
+
+    <link rel="icon" href="logo.avif" type="image/avif">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+
+        // Handle PWA installation
+        window.deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            window.deferredPrompt = e;
+            // Show install button or notification here if needed
+        });
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #0a0a0a; /* Slightly off-black */
+            background-image: radial-gradient(circle at top right, rgba(250, 204, 21, 0.15), transparent 50%),
+                              radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.15), transparent 60%);
+            color: #e5e7eb; /* gray-200 */
+        }
+
+        .card-3d {
+            background-color: rgba(20, 20, 20, 0.5); /* neutral-900 with opacity */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(250, 204, 21, 0.1);
+            border-radius: 1.5rem; /* 24px */
+            box-shadow: 0px 8px 24px rgba(0,0,0,0.5), inset 0px 1px 1px rgba(255, 255, 255, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card-3d:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0px 12px 32px rgba(250, 204, 21, 0.1), inset 0px 1px 1px rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-3d {
+             border-radius: 12px;
+             border-bottom-width: 4px;
+             transition: all 0.15s ease-in-out;
+             text-shadow: 0px 1px 2px rgba(0,0,0,0.2);
+             transform: perspective(1000px);
+        }
+        .btn-3d:hover {
+            transform: translateY(-2px) perspective(1000px);
+            border-bottom-width: 6px;
+        }
+        .btn-3d:active {
+            transform: translateY(2px) perspective(1000px);
+            border-bottom-width: 2px;
+        }
+
+        .btn-yellow {
+             background: linear-gradient(145deg, #facc15, #eab308);
+             border-color: #ca8a04;
+             color: black;
+        }
+        .btn-green {
+             background: linear-gradient(145deg, #22c55e, #16a34a);
+             border-color: #15803d;
+             color: white;
+        }
+        .btn-red {
+             background: linear-gradient(145deg, #ef4444, #dc2626);
+             border-color: #b91c1c;
+             color: white;
+        }
+         .btn-purple {
+             background: linear-gradient(145deg, #a855f7, #9333ea);
+             border-color: #7e22ce;
+             color: white;
+        }
+
+
+        /* Glassmorphism for inputs */
+        .input-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            color: white;
+            transition: box-shadow 0.3s ease;
+        }
+        .input-glass::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        .input-glass:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        @keyframes pulse-result {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pulse-result {
+            animation: pulse-result 0.5s ease-out forwards;
+        }
+        /* Adjusted animation for the rocket to give a more dynamic feel */
+        @keyframes fly {
+            0% { transform: translateX(-50%) translateY(50%) scale(1); opacity: 0.5; }
+            25% { transform: translateX(0%) translateY(0%) scale(1.1); opacity: 0.7; }
+            50% { transform: translateX(50%) translateY(-50%) scale(1.2); opacity: 1; }
+            75% { transform: translateX(100%) translateY(-25%) scale(1.1); opacity: 0.7; }
+            100% { transform: translateX(150%) translateY(0%) scale(1); opacity: 0.5; }
+        }
+        .animate-fly {
+            animation: fly 2s ease-in-out infinite alternate; /* Looping animation */
+        }
+        /* Mines Game specific styles */
+        .mines-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            width: 100%;
+            max-width: 320px; /* Adjust grid size */
+            margin: 0 auto;
+        }
+        .mine-box {
+            width: 60px; /* Fixed size for boxes */
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            background-color: #374151; /* unopened - gray-700 */
+            border: 2px solid #ca8a04; /* golden-700 */
+            color: #fefce8; /* yellow-50 */
+        }
+        .mine-box:hover:not(.safe):not(.mine):not(.disabled-box) {
+            transform: scale(1.05);
+            background-color: #4b5563; /* gray-600 */
+        }
+        .mine-box.safe {
+            background-color: #eab308; /* Golden for safe */
+            color: black;
+            border-color: #facc15;
+        }
+        .mine-box.mine {
+            background-color: #1f2937; /* Dark gray for mine */
+            color: white;
+            border-color: #ef4444; /* red border for emphasis */
+        }
+        .mine-box.safe_revealed {
+            background-color: #ca8a04; /* Darker Golden for revealed safe (unopened) */
+            color: white;
+            border-color: #eab308;
+        }
+        .mine-box.disabled-box {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .mine-box img {
+            width: 80%; /* Make images fit inside the box */
+            height: 80%;
+            object-fit: contain;
+        }
+
+        /* Aviator video background styling */
+        .aviator-video-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Cover the entire container */
+            z-index: 0; /* Behind other content */
+            border-radius: 8px; /* Match container border-radius */
+        }
+
+        /* Loader styles */
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loader-content {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .loader-logo {
+            width: 80px;
+            height: 80px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 4px solid #facc15; /* Golden border */
+            overflow: hidden;
+        }
+
+        .loader-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .loader-ring {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            border-top-color: #facc15; /* Golden */
+            animation: spin 1s linear infinite;
+        }
+
+        .loader-ring::before,
+        .loader-ring::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            border: 4px solid transparent;
+        }
+
+        .loader-ring::before {
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border-top-color: #eab308; /* Darker Golden */
+            animation: spin 2s linear infinite;
+        }
+
+        .loader-ring::after {
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            bottom: 15px;
+            border-top-color: #ca8a04; /* Even Darker Golden */
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loader-glow {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(250, 204, 21, 0.2) 0%, rgba(250, 204, 21, 0) 70%);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+        @keyframes bannerSwipe {
+            0% { transform: translateX(0); }
+            15% { transform: translateX(0); }
+            20% { transform: translateX(-100%); }
+            35% { transform: translateX(-100%); }
+            40% { transform: translateX(-200%); }
+            55% { transform: translateX(-200%); }
+            60% { transform: translateX(-300%); }
+            75% { transform: translateX(-300%); }
+            80% { transform: translateX(-400%); }
+            95% { transform: translateX(-400%); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes bannerDot {
+            0% { opacity: 0.5; background: white; }
+            4% { opacity: 1; background: #FACC15; }
+            20% { opacity: 1; background: #FACC15; }
+            24% { opacity: 0.5; background: white; }
+            100% { opacity: 0.5; background: white; }
+        }
+        @keyframes gradientRun {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        @keyframes slide-up {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slide-up 0.3s ease-out;
+        }
+        .auth-page {
+            min-height: 100vh;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            padding: 0 20px 30px;
+            max-width: 448px;
+            margin: 0 auto;
+        }
+        .auth-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            min-height: 48px;
+        }
+        .auth-back-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            font-size: 20px;
+        }
+        .auth-back-btn svg { stroke: #fff; }
+        .auth-logo-center {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #facc15, #eab308);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+        .auth-lang {
+            font-size: 13px;
+            color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .auth-title-wrap {
+            text-align: center;
+            margin: 10px 0 24px;
+        }
+        .auth-phone-icon-wrap {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+        }
+        .auth-phone-icon-wrap svg { stroke: #facc15; }
+        .auth-title-text {
+            font-size: 17px;
+            font-weight: 600;
+            color: #facc15;
+            margin: 0 0 12px;
+            letter-spacing: 0.5px;
+        }
+        .auth-divider {
+            width: 50px;
+            height: 2px;
+            background: linear-gradient(90deg, #facc15, #eab308);
+            margin: 0 auto;
+            border-radius: 2px;
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .auth-error {
+            background: rgba(239, 68, 68, 0.12);
+            color: #fca5a5;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            text-align: center;
+        }
+        .auth-field-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 2px;
+        }
+        .auth-field-icon svg { stroke: #facc15; }
+        .auth-field-label {
+            font-size: 15px;
+            color: #e5e7eb;
+            font-weight: 500;
+        }
+        .auth-phone-row {
+            display: flex;
+            gap: 10px;
+        }
+        .auth-country-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            color: #fff;
+            padding: 12px 14px;
+            font-size: 15px;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            outline: none;
+            min-width: 75px;
+            appearance: none;
+            -webkit-appearance: none;
+            text-align: center;
+        }
+        .auth-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            color: #fff;
+            padding: 12px 14px;
+            font-size: 15px;
+            font-family: 'Poppins', sans-serif;
+            width: 100%;
+            outline: none;
+            transition: box-shadow 0.3s ease;
+        }
+        .auth-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+        .auth-input:focus { box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5); background: rgba(255, 255, 255, 0.1); }
+        .auth-phone-input { flex: 1; }
+        .auth-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .auth-input-wrap .auth-input { padding-right: 44px; }
+        .auth-eye-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-eye-btn svg { stroke: #9ca3af; }
+        .auth-privacy {
+            display: flex;
+            align-items: center;
+            margin-top: 2px;
+        }
+        .auth-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #9ca3af;
+            user-select: none;
+        }
+        .auth-checkbox { display: none; }
+        .auth-checkmark {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #facc15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .auth-checkbox:checked + .auth-checkmark {
+            background: #facc15;
+            border-color: #facc15;
+        }
+        .auth-checkbox:checked + .auth-checkmark::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #111;
+            position: absolute;
+        }
+        .auth-privacy-link { color: #ef4444; cursor: pointer; }
+        .auth-btn-gradient {
+            width: 100%;
+            padding: 14px;
+            border-radius: 28px;
+            border: none;
+            font-size: 17px;
+            font-weight: 600;
+            color: #111827;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(145deg, #facc15, #eab308);
+            transition: opacity 0.2s, transform 0.15s;
+            margin-top: 6px;
+            border-bottom: 4px solid #ca8a04;
+        }
+        .auth-btn-gradient:hover { opacity: 0.9; transform: translateY(-2px); }
+        .auth-btn-gradient:active { transform: translateY(2px); border-bottom-width: 2px; }
+        .auth-btn-gradient:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .auth-bottom-link {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 14px;
+            color: #e5e7eb;
+            letter-spacing: 0.5px;
+        }
+        .auth-link-btn {
+            background: none;
+            border: none;
+            color: #facc15;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            letter-spacing: 0.5px;
+        }
+        .auth-link-btn:hover { text-decoration: underline; }
+        
+        /* JAIOCLUB specific styles */
+        .auth-content {
+            background: transparent;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .auth-banner {
+            background: linear-gradient(90deg, #f97316, #ec4899, #8b5cf6, #3b82f6);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+        .auth-banner-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+        .auth-banner-text {
+            font-size: 13px;
+            color: #fff;
+            opacity: 0.95;
+            line-height: 1.5;
+        }
+        .auth-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: none;
+            color: #9ca3af;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .auth-tab.active {
+            background: rgba(250, 204, 21, 0.2);
+            color: #facc15;
+        }
+        .auth-remember {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 15px 0;
+        }
+        .auth-remember-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+        .auth-forgot-link {
+            font-size: 13px;
+            color: #facc15;
+            text-decoration: none;
+        }
+        .auth-footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .auth-footer-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #9ca3af;
+            text-decoration: none;
+        }
+        .auth-footer-link svg {
+            width: 16px;
+            height: 16px;
+            stroke: #9ca3af;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCBUBO2wuDcpRRnPir3-BzBFz2SZoqyFQ0",
+            authDomain: "zupwin-5151c.firebaseapp.com",
+            projectId: "zupwin-5151c",
+            storageBucket: "zupwin-5151c.firebasestorage.app",
+            messagingSenderId: "7234006045",
+            appId: "1:7234006045:web:493e0d7a41f80458b4eaf4"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Inlined SVG for Lucide icons for minimal requests
+        const ArrowLeft = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>);
+        const Coins = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-coins"><circle cx="8" cy="8" r="6"/><path d="M18.7 10.7H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9.3a2 2 0 0 1-2-2V13a2 2 0 0 1 2-2h1.3"/><path d="M10 16H8"/></svg>);
+        const TrendingUp = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trending-up"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>);
+        const History = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucude-history"><path d="M12 8v4l3 3"/><path d="M17.8 6.2c.7 5.1-1.6 9.8-6.1 11.3a5.5 5.5 0 0 1-7.8-7.6 5.5 5.5 0 0 1 7.6-7.8l1.6 1.6"/></svg>);
+        const Gamepad = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-gamepad"><path d="M6 12H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><path d="M12 12v6a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-6"/><path d="M12 12H8a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4"/></svg>);
+        const Rocket = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rocket"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5L2 22c0 0.5 0.5 1 1 1h.5c0 0-3-1.5-2.5-3.5C3.5 16.5 6 15 6 15l-1.5 1.5z"/><path d="M10 15h4l-1 6H9l1-6z"/><path d="M17.7 9.3l-1.3-1.3c-0.2-0.2-0.5-0.3-0.7-0.3c-0.3 0-0.5 0.1-0.7 0.3l-1.3 1.3c-0.4 0.4-0.4 1 0 1.4l1.3 1.3c0.2 0.2 0.5 0.3 0.7 0.3c0.3 0 0.5-0.1 0.7-0.3l1.3-1.3c0.4-0.4 0.4-1 0-1.4z"/><path d="M16 21v-4l-1.5-1.5"/><path d="M13 14V3l3 3l-3 3"/><path d="M15 12h5.5c.5 0 1 .5 1 1v.5c0 0-1.5 3-3.5 2.5S15 12 15 12z"/></svg>);
+        const Bomb = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bomb"><circle cx="12" cy="12" r="10"/><path d="m15.5 9.5-3 3-3-3"/><path d="m8.5 14.5 3-3 3 3"/></svg>);
+        const Sparkles = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles"><path d="M12 20V10"/><path d="M19 12H5"/><path d="m12 21.5 3.5 2.5L12 17l-3.5 2.5z"/><path d="m22 2-2.5 2.5L17 2l2.5-2.5z"/><path d="m2 2 2.5 2.5L7 2l-2.5-2.5z"/></svg>);
+
+        // Logo Component
+        const Logo = ({ onClick }) => (
+            <div 
+                className="w-16 h-16 rounded-full overflow-hidden border-4 border-yellow-400 cursor-pointer hover:scale-105 transition-transform"
+                onClick={onClick}
+            >
+                <img src="logo.avif" alt="Zupwin Logo" className="w-full h-full object-cover" />
+            </div>
+        );
+
+        // Guide Button Component
+        const GuideButton = ({ audioFile }) => {
+            const [audio] = React.useState(new Audio(audioFile));
+
+            // Cleanup audio when component unmounts
+            React.useEffect(() => {
+                return () => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                };
+            }, []);
+
+            const playGuide = () => {
+                audio.currentTime = 0; // Reset to start
+                audio.play();
+            };
+
+            return (
+                <button
+                    onClick={playGuide}
+                    className="px-3 py-1 bg-yellow-400 text-black rounded-lg font-bold hover:bg-yellow-500 transition-colors flex items-center gap-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4"/>
+                        <path d="M12 8h.01"/>
+                    </svg>
+                    Guide
+                </button>
+            );
+        };
+
+        // --- Auth Components ---
+        const LoginPage = ({ setAuthenticated, navigateToRegister, navigateToLanding }) => {
+            const [error, setError] = React.useState('');
+            const [email, setEmail] = React.useState('');
+            const [password, setPassword] = React.useState('');
+            const [showPassword, setShowPassword] = React.useState(false);
+            const [loading, setLoading] = React.useState(false);
+            const [rememberMe, setRememberMe] = React.useState(false);
+            const [resetMessage, setResetMessage] = React.useState('');
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+                
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                    setAuthenticated(true);
+                } catch (error) {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+                        setError('wrong credentials please try again');
+                    } else {
+                        setError(error.message);
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handlePasswordReset = async () => {
+                if (!email) {
+                    setError('Please enter your email address first');
+                    return;
+                }
+                
+                try {
+                    await auth.sendPasswordResetEmail(email);
+                    setResetMessage('Password reset email sent! Please check your inbox.');
+                    setError('');
+                } catch (error) {
+                    setError(error.message);
+                    setResetMessage('');
+                }
+            };
+
+            return (
+                <div className="auth-page">
+                    <div className="auth-header">
+                        <button type="button" onClick={navigateToLanding} className="auth-back-btn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <div className="auth-logo-center">Zupwin</div>
+                        <div className="auth-lang">&#x1F1FA;&#x1F1F8; EN</div>
+                    </div>
+                    
+                    <div className="auth-content">
+                        <div className="auth-banner">
+                            <div className="auth-banner-title">Log in</div>
+                            <div className="auth-banner-text">Please log in with your email<br/>If you forget your password, please contact customer service</div>
+                        </div>
+
+                        <form onSubmit={handleLogin} className="auth-form">
+                            {error && <div className="auth-error">{error}</div>}
+                            {resetMessage && <div className="auth-error" style={{background: 'rgba(34, 197, 94, 0.12)', color: '#86efac', borderColor: 'rgba(34, 197, 94, 0.25)'}}>{resetMessage}</div>}
+                            
+                            <div className="auth-field-header">
+                                <div className="auth-field-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                </div>
+                                <span className="auth-field-label">Email</span>
+                            </div>
+                            <input
+                                type="email"
+                                placeholder="Please enter your email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="auth-input"
+                                required
+                            />
+                            
+                            <div className="auth-field-header">
+                                <div className="auth-field-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                </div>
+                                <span className="auth-field-label">Password</span>
+                            </div>
+                            <div className="auth-input-wrap">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Enter password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="auth-input"
+                                    required
+                                />
+                                <button type="button" className="auth-eye-btn" onClick={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                    ) : (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    )}
+                                </button>
+                            </div>
+                            
+                            <div className="auth-remember">
+                                <label className="auth-remember-label">
+                                    <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="auth-checkbox" />
+                                    <span className="auth-checkmark"></span>
+                                    Remember password
+                                </label>
+                                <button type="button" onClick={handlePasswordReset} className="auth-forgot-link" style={{background: 'none', border: 'none', cursor: 'pointer'}}>
+                                    Forgot password
+                                </button>
+                            </div>
+                            
+                            <button type="submit" disabled={loading} className="auth-btn-gradient">
+                                {loading ? 'Logging in...' : 'Log in'}
+                            </button>
+                            
+                            <button type="button" onClick={navigateToRegister} className="auth-btn-gradient" style={{background: 'linear-gradient(145deg, #6366f1, #9333ea)', borderBottomColor: '#7e22ce'}}>
+                                Register
+                            </button>
+                        </form>
+                        
+                        <div className="auth-footer-links">
+                            <a href="https://wa.me/9520457366" target="_blank" rel="noopener noreferrer" className="auth-footer-link">
+                                <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 12 2c-3.74 0-7.17.87-9.63 2.37"/><path d="M6.26 6.26A10.71 10.71 0 0 1 12 4c4.5 0 8.28 3.14 9.37 7.37"/></svg>
+                                Customer Service
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const RegisterPage = ({ setAuthenticated, navigateToLogin }) => {
+            const [error, setError] = React.useState('');
+            const [email, setEmail] = React.useState('');
+            const [password, setPassword] = React.useState('');
+            const [confirmPassword, setConfirmPassword] = React.useState('');
+            const [inviteCode, setInviteCode] = React.useState('');
+            const [agreed, setAgreed] = React.useState(false);
+            const [showPassword, setShowPassword] = React.useState(false);
+            const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+            const [loading, setLoading] = React.useState(false);
+
+            const handleRegister = async (e) => {
+                e.preventDefault();
+                setError('');
+                
+                if (!agreed) {
+                    setError('Please agree to the Privacy Agreement');
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    setError('Passwords do not match');
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    setError('Password must be at least 6 characters long');
+                    return;
+                }
+                
+                setLoading(true);
+                
+                try {
+                    const result = await auth.createUserWithEmailAndPassword(email, password);
+                    
+                    await db.collection('users').doc(result.user.uid).set({
+                        email: email,
+                        phone: null,
+                        inviteCode: inviteCode || null,
+                        balance: 0,
+                        gameHistory: [],
+                        depositHistory: [],
+                        withdrawHistory: [],
+                        createdAt: new Date().toISOString()
+                    });
+                    
+                    setAuthenticated(true);
+                } catch (error) {
+                    setError(error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="auth-page">
+                    <div className="auth-header">
+                        <button type="button" onClick={navigateToLogin} className="auth-back-btn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <div className="auth-logo-center">Zupwin</div>
+                        <div className="auth-lang">&#x1F1FA;&#x1F1F8; EN</div>
+                    </div>
+                    
+                    <div className="auth-content">
+                        <div className="auth-banner">
+                            <div className="auth-banner-title">Register</div>
+                            <div className="auth-banner-text">Create a new account<br/>Join us and start your journey</div>
+                        </div>
+
+                        <form onSubmit={handleRegister} className="auth-form">
+                            {error && <div className="auth-error">{error}</div>}
+                            
+                            <div className="auth-field-header">
+                                <div className="auth-field-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                </div>
+                                <span className="auth-field-label">Email</span>
+                            </div>
+                            <input
+                                type="email"
+                                placeholder="Please enter your email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="auth-input"
+                                required
+                            />
+                            
+                            <div className="auth-field-header">
+                                <div className="auth-field-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                </div>
+                                <span className="auth-field-label">Set password</span>
+                            </div>
+                            <div className="auth-input-wrap">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Set password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="auth-input"
+                                    required
+                                    minLength="6"
+                                />
+                                <button type="button" className="auth-eye-btn" onClick={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                    ) : (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    )}
+                                </button>
+                            </div>
+                            
+                            <div className="auth-field-header">
+                                <div className="auth-field-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                </div>
+                                <span className="auth-field-label">Confirm password</span>
+                            </div>
+                            <div className="auth-input-wrap">
+                                <input
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    placeholder="Confirm password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="auth-input"
+                                    required
+                                />
+                                <button type="button" className="auth-eye-btn" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                    {showConfirmPassword ? (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                    ) : (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    )}
+                                </button>
+                            </div>
+                            
+                            <div className="auth-field-header">
+                                <div className="auth-field-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                </div>
+                                <span className="auth-field-label">Invite code</span>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Please enter the invitation code"
+                                value={inviteCode}
+                                onChange={(e) => setInviteCode(e.target.value)}
+                                className="auth-input"
+                            />
+                            
+                            <div className="auth-privacy">
+                                <label className="auth-checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={agreed}
+                                        onChange={(e) => setAgreed(e.target.checked)}
+                                        className="auth-checkbox"
+                                    />
+                                    <span className="auth-checkmark"></span>
+                                    <span className="auth-privacy-text">I have read and agree <span className="auth-privacy-link">[Privacy Agreement]</span></span>
+                                </label>
+                            </div>
+                            
+                            <button type="submit" disabled={loading} className="auth-btn-gradient">
+                                {loading ? 'Registering...' : 'Register'}
+                            </button>
+                            
+                            <button type="button" onClick={navigateToLogin} className="auth-btn-gradient" style={{background: 'linear-gradient(145deg, #6366f1, #9333ea)', borderBottomColor: '#7e22ce'}}>
+                                Login
+                            </button>
+                        </form>
+                        
+                        <div className="auth-footer-links">
+                            <a href="https://wa.me/9520457366" target="_blank" rel="noopener noreferrer" className="auth-footer-link">
+                                <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 12 2c-3.74 0-7.17.87-9.63 2.37"/><path d="M6.26 6.26A10.71 10.71 0 0 1 12 4c4.5 0 8.28 3.14 9.37 7.37"/></svg>
+                                Customer Service
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+
+        // --- History Page Component ---
+        const HistoryPage = ({ navigateTo, gameHistory, depositHistory, withdrawHistory, initialTab = 'game' }) => {
+            const [activeTab, setActiveTab] = React.useState(initialTab); // 'game', 'deposit', 'withdraw'
+
+            React.useEffect(() => {
+                setActiveTab(initialTab);
+            }, [initialTab]);
+
+            const getResultColor = (result) => {
+                if (result === 0) return 'bg-gradient-to-r from-red-500 to-purple-500';
+                if (result === 5) return 'bg-gradient-to-r from-green-500 to-purple-500';
+                if (result % 2 === 0) return 'bg-red-500';
+                return 'bg-green-500';
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-[#0a0a0a] min-h-screen text-white p-4">
+                    <div className="flex items-center gap-2 mb-6">
+                        <button onClick={() => navigateTo('gameSelection')} className="p-2 rounded-full bg-gray-800 bg-opacity-50">
+                            <ArrowLeft className="w-5 h-5 text-white" />
+                        </button>
+                        <Logo />
+                        <h2 className="text-xl font-bold">Transaction History</h2>
+                        <div className="ml-auto flex gap-2 items-center">
+                            <GuideButton audioFile="history.mp3" />
+                        </div>
+                    </div>
+
+                    <div className="flex bg-gray-800 bg-opacity-50 rounded-lg mb-4 p-1 card-3d">
+                        <button
+                            className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${activeTab === 'game' ? 'bg-yellow-400 text-black-lg' : 'text-white'}`}
+                            onClick={() => setActiveTab('game')}
+                        >
+                            Game
+                        </button>
+                        <button
+                            className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${activeTab === 'deposit' ? 'bg-yellow-400 text-black-lg' : 'text-white'}`}
+                            onClick={() => setActiveTab('deposit')}
+                        >
+                            Deposit
+                        </button>
+                        <button
+                            className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${activeTab === 'withdraw' ? 'bg-yellow-400 text-black-lg' : 'text-white'}`}
+                            onClick={() => setActiveTab('withdraw')}
+                        >
+                            Withdraw
+                        </button>
+                    </div>
+
+                    <div className="bg-gray-800 bg-opacity-30 rounded-lg p-4 card-3d">
+                        {activeTab === 'game' && (
+                            <div>
+                                <h3 className="text-lg font-semibold mb-3">Game Play History</h3>
+                                {gameHistory.slice(0, 10).length === 0 ? (
+                                    <p className="text-center opacity-70">No game history yet.</p>
+                                ) : (
+                                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                                        {gameHistory.slice(0, 10).map((game, index) => (
+                                            <div key={game.period} className="flex items-center justify-between bg-transparent bg-opacity-20 rounded-lg p-3">
+                                                <div className="text-xs">{game.period}</div>
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${getResultColor(game.result)}`}>
+                                                    {game.result}
+                                                </div>
+                                                <div className="text-sm">
+                                                    {game.color ? (game.color.charAt(0).toUpperCase() + game.color.slice(1)) : ''} ({game.size})
+                                                </div>
+                                                {game.betOutcome && (
+                                                    <div className={`font-bold ${game.betOutcome.type === 'win' ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {game.betOutcome.type === 'win' ? '+' : '-'}₹{game.betOutcome.amount.toFixed(2)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'deposit' && (
+                            <div>
+                                <h3 className="text-lg font-semibold mb-3">Deposit History</h3>
+                                {depositHistory.slice(0, 10).length === 0 ? (
+                                    <p className="text-center opacity-70">No deposit history yet.</p>
+                                ) : (
+                                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                                        {depositHistory.slice(0, 10).map((deposit, index) => (
+                                            <div key={index} className="flex items-center justify-between bg-transparent bg-opacity-20 rounded-lg p-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-2 h-2 rounded-full ${deposit.status === 'Completed' ? 'bg-green-500' : deposit.status === 'Rejected' ? 'bg-red-500' : 'bg-yellow-400'}`}></div>
+                                                    <div className={`text-sm font-bold ${deposit.status === 'Completed' ? 'text-green-400' : deposit.status === 'Rejected' ? 'text-red-400' : 'text-yellow-400'}`}>+ ₹{deposit.amount.toFixed(2)}</div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="text-xs opacity-80 truncate">{deposit.utr || deposit.upiId}</div>
+                                                    <div className={`text-xs px-2 py-1 rounded ${deposit.status === 'Completed' ? 'bg-green-500 bg-opacity-20 text-green-300' : deposit.status === 'Rejected' ? 'bg-red-500 bg-opacity-20 text-red-300' : 'bg-yellow-400 bg-opacity-20 text-yellow-800'}`}>{deposit.status || 'Pending'}</div>
+                                                </div>
+                                                <div className="text-xs opacity-70">{new Date(deposit.timestamp).toLocaleString()}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'withdraw' && (
+                            <div>
+                                <h3 className="text-lg font-semibold mb-3">Withdrawal History</h3>
+                                {withdrawHistory.slice(0, 10).length === 0 ? (
+                                    <p className="text-center opacity-70">No withdrawal history yet.</p>
+                                ) : (
+                                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                                        {withdrawHistory.slice(0, 10).map((withdraw, index) => (
+                                            <div key={index} className="flex items-center justify-between bg-transparent bg-opacity-20 rounded-lg p-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-2 h-2 rounded-full ${withdraw.status === 'Completed' ? 'bg-green-500' : withdraw.status === 'Rejected' ? 'bg-red-500' : 'bg-yellow-400'}`}></div>
+                                                    <div className="text-sm font-bold text-red-400">- ₹{withdraw.amount.toFixed(2)}</div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="text-xs opacity-80 truncate">{withdraw.upiId}</div>
+                                                    <div className={`text-xs px-2 py-1 rounded ${withdraw.status === 'Completed' ? 'bg-green-500 bg-opacity-20 text-green-300' : withdraw.status === 'Rejected' ? 'bg-red-500 bg-opacity-20 text-red-300' : 'bg-yellow-400 bg-opacity-20 text-yellow-800'}`}>{withdraw.status || 'Pending'}</div>
+                                                </div>
+                                                <div className="text-xs opacity-70">{new Date(withdraw.timestamp).toLocaleString()}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+
+        // --- Deposit Page Component ---
+        const DepositPage = ({ setBalance, navigateTo, addDepositToHistory, onError }) => {
+            const [depositAmount, setDepositAmount] = React.useState('');
+            const [upiInput, setUpiInput] = React.useState('');
+            const [imageFile, setImageFile] = React.useState(null);
+            const [imageError, setImageError] = React.useState('');
+            const [submitMessage, setSubmitMessage] = React.useState('');
+            const upiId = "zupwin@ibl";
+            const upiQrCodeUrl = "pay.png";
+
+            const depositAmounts = [10, 100, 200, 500, 1000, 2000];
+            const MIN_DEPOSIT_AMOUNT = 10;
+
+            // Helper to check PNG and timestamp
+            const handleImageChange = (e) => {
+                setImageError('');
+                setImageFile(null);
+                setSubmitMessage('');
+                const file = e.target.files[0];
+                if (!file) return;
+                // Accept all image types
+                if (!file.type.startsWith('image/')) {
+                    setImageError('Only image files are allowed.');
+                    return;
+                }
+                // Check file date (lastModified)
+                const now = Date.now();
+                const fileTime = file.lastModified;
+                if (Math.abs(now - fileTime) > 90 * 1000) {
+                    setImageError('Image must be from now or within 1.5 minutes.');
+                    return;
+                }
+                setImageFile(file);
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setSubmitMessage('');
+                if (!depositAmount) {
+                    setSubmitMessage('Please select an amount.');
+                    onError && onError();
+                    return;
+                }
+                if (!upiInput) {
+                    setSubmitMessage('Please enter your UPI ID.');
+                    onError && onError();
+                    return;
+                }
+                if (!imageFile) {
+                    setSubmitMessage('Please upload a valid PNG image.');
+                    onError && onError();
+                    return;
+                }
+                // Upload to Firebase (for admin panel)
+                try {
+                    // You can add Firebase Storage upload here if needed
+                    // For now, just add to deposit history (simulate)
+                    addDepositToHistory({
+                        amount: parseFloat(depositAmount),
+                        upiId: upiInput,
+                        imageName: imageFile.name,
+                        timestamp: new Date().toISOString(),
+                        status: 'Pending'
+                    });
+                    setSubmitMessage('Deposit request submitted. Your Deposite get add to your balance in 1 to 2 hours. Thankyou!');
+                    setDepositAmount('');
+                    setUpiInput('');
+                    setImageFile(null);
+                } catch (err) {
+                    setSubmitMessage('Error submitting deposit.');
+                }
+                // Send Formspree email to admin
+                const formData = new FormData();
+                formData.append('Deposit Amount', `₹${depositAmount}`);
+                formData.append('UPI ID', upiInput);
+                formData.append('Timestamp', new Date().toLocaleString());
+                formData.append('Image Name', imageFile.name);
+                fetch('https://formspree.io/f/mqaqanbg', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                }).catch(() => {});
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-[#0a0a0a] min-h-screen text-white p-4">
+                    <div className="flex items-center gap-2 mb-6">
+                        <button onClick={() => navigateTo('gameSelection')} className="p-2 rounded-full bg-gray-800 bg-opacity-50">
+                            <ArrowLeft className="w-5 h-5 text-white" />
+                        </button>
+                        <Logo />
+                        <h2 className="text-xl font-bold">Deposit</h2>
+                        <div className="ml-auto flex gap-2 items-center">
+                            <button
+                                onClick={() => navigateTo('history', { initialTab: 'deposit' })}
+                                className="px-3 py-1 bg-gray-800 bg-opacity-50 rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
+                            >
+                                History
+                            </button>
+                            <GuideButton audioFile="deposite.mp3" />
+                        </div>
+                    </div>
+
+                    <form className="bg-gray-800 bg-opacity-50 rounded-lg p-6 mb-4" onSubmit={handleSubmit}>
+                        {upiQrCodeUrl && (
+                            <div className="mb-4 text-center">
+                                <p className="text-sm font-semibold mb-2">Scan QR to Pay</p>
+                                <img src={upiQrCodeUrl} alt="UPI QR Code" className="w-40 h-40 mx-auto bg-white p-2 rounded-lg" />
+                                <p className="text-sm mt-2">UPI ID: <span className="font-bold text-yellow-300">{upiId}</span></p>
+                            </div>
+                        )}
+
+                        <label className="block text-sm font-semibold mb-2">Select Amount (₹)</label>
+                        <div className="grid grid-cols-3 gap-2 mb-4">
+                            {depositAmounts.map((amount) => (
+                                <button
+                                    type="button"
+                                    key={amount}
+                                    onClick={() => setDepositAmount(amount.toString())}
+                                    className={`p-3 rounded-lg font-bold transition-colors ${
+                                        depositAmount === amount.toString()
+                                            ? 'bg-yellow-400 text-black'
+                                            : 'bg-gray-700 bg-opacity-50 text-white hover:bg-gray-600'
+                                    }`}
+                                >
+                                    ₹{amount}
+                                </button>
+                            ))}
+                        </div>
+
+                        <label className="block text-sm font-semibold mb-2">Enter Your UPI ID</label>
+                        <input
+                            type="text"
+                            value={upiInput}
+                            onChange={e => setUpiInput(e.target.value)}
+                            className="w-full mb-4 p-2 rounded bg-gray-700 text-white"
+                            placeholder="yourupi@bank"
+                            required
+                        />
+
+                        <label className="block text-sm font-semibold mb-2">Upload Payment Screenshot (Image only, now or within 1.5 min)</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="w-full mb-2"
+                        />
+                        {imageError && <div className="text-red-400 text-sm mb-2">{imageError}</div>}
+                        {imageFile && <div className="text-green-400 text-xs mb-2">Selected: {imageFile.name}</div>}
+
+                        <button
+                            type="submit"
+                            className="w-full bg-yellow-400 py-3 rounded-lg font-bold text-black hover:bg-yellow-500 transition-colors mb-3"
+                        >
+                            Submit Deposit Request
+                        </button>
+                        {submitMessage && <div className="text-center text-sm mt-2 text-yellow-300">{submitMessage}</div>}
+                    </form>
+
+                    <div className="bg-gray-800 bg-opacity-30 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold mb-2 text-yellow-300">Deposit Instructions:</h3>
+                        <ul className="text-sm list-disc pl-5 space-y-2 text-gray-300">
+                            <li>Select the amount you wish to deposit from the available options.</li>
+                            <li>Enter your UPI ID and upload a screenshot of your payment (must be an image, current or within 1.5 minutes).</li>
+                            <li>Click <b>Submit Deposit Request</b> to send your request for admin approval.</li>
+                            <li>Available deposit amounts: ₹10, ₹100, ₹200, ₹500, ₹1000, ₹2000</li>
+                        </ul>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Withdraw Page Component ---
+        const WithdrawPage = ({ balance, setBalance, navigateTo, addWithdrawToHistory, onError }) => {
+            const [withdrawAmount, setWithdrawAmount] = React.useState('');
+            const [upiIdInput, setUpiIdInput] = React.useState('');
+            const [message, setMessage] = React.useState(null);
+            const formRef = React.useRef(null);
+
+            const MIN_WITHDRAW_AMOUNT = 200;
+            const withdrawAmounts = [200, 500, 1000, 2000];
+
+            const handleWithdraw = async () => {
+                const amount = parseFloat(withdrawAmount);
+                if (isNaN(amount) || amount < MIN_WITHDRAW_AMOUNT) {
+                    onError(); // Play error sound for invalid amount
+                    setMessage({ type: 'error', text: `Please select a valid amount (minimum ₹${MIN_WITHDRAW_AMOUNT}).` });
+                    return;
+                }
+                if (!upiIdInput) {
+                    onError(); // Play error sound for missing UPI ID
+                    setMessage({ type: 'error', text: 'Please enter your UPI ID.' });
+                    return;
+                }
+                if (amount > balance) {
+                    onError(); // Play error sound for insufficient balance
+                    setMessage({ type: 'error', text: 'Insufficient balance!' });
+                    return;
+                }
+
+                setBalance(prev => prev - amount);
+                addWithdrawToHistory({
+                    amount: amount,
+                    upiId: upiIdInput,
+                    timestamp: new Date().toISOString(),
+                    status: 'Pending'
+                });
+
+                const formData = new FormData(formRef.current);
+                formData.set('Withdrawal Amount', `₹${amount.toFixed(2)}`);
+                formData.set('UPI ID', upiIdInput);
+                formData.set('Timestamp', new Date().toLocaleString());
+
+                try {
+                    const response = await fetch("https://formspree.io/f/mqaqanbg", {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        setMessage({ type: 'success', text: `Withdrawal request for ₹${amount.toFixed(2)} submitted! You will receive funds shortly.` });
+                        setWithdrawAmount('');
+                        setUpiIdInput('');
+                    } else {
+                        onError(); // Play error sound for failed request
+                        setMessage({ type: 'error', text: 'Failed to send withdrawal request. Please try again.' });
+                    }
+                } catch (error) {
+                    onError(); // Play error sound for network error
+                    console.error('Formspree submission error:', error);
+                    setMessage({ type: 'error', text: 'An error occurred. Please check console.' });
+                }
+
+                setTimeout(() => {
+                    setMessage(null);
+                    navigateTo('gameSelection');
+                }, 3000);
+
+                // Send Formspree email to admin for withdrawal
+                const withdrawFormData = new FormData();
+                withdrawFormData.append('Withdrawal Amount', `₹${amount.toFixed(2)}`);
+                withdrawFormData.append('UPI ID', upiIdInput);
+                withdrawFormData.append('Timestamp', new Date().toLocaleString());
+                fetch('https://formspree.io/f/xovwnkpo', {
+                    method: 'POST',
+                    body: withdrawFormData,
+                    headers: { 'Accept': 'application/json' }
+                }).catch(() => {});
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-[#0a0a0a] min-h-screen text-white p-4">
+                    <div className="flex items-center gap-2 mb-6">
+                        <button onClick={() => navigateTo('gameSelection')} className="p-2 rounded-full bg-gray-800 bg-opacity-50">
+                            <ArrowLeft className="w-5 h-5 text-white" />
+                        </button>
+                        <Logo />
+                        <h2 className="text-xl font-bold">Withdraw</h2>
+                        <div className="ml-auto flex gap-2 items-center">
+                            <button
+                                onClick={() => navigateTo('history', { initialTab: 'withdraw' })}
+                                className="px-3 py-1 bg-gray-800 bg-opacity-50 rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
+                            >
+                                History
+                            </button>
+                            <GuideButton audioFile="withdraw.mp3" />
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-800 bg-opacity-50 rounded-lg p-6 mb-4">
+                        <div className="text-center mb-4">
+                            <div className="text-xl font-bold">Current Balance: <span className="text-yellow-300">₹{balance.toFixed(2)}</span></div>
+                        </div>
+                        <label className="block text-sm font-semibold mb-2">Select Amount (₹)</label>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                            {withdrawAmounts.map((amount) => (
+                                <button
+                                    key={amount}
+                                    onClick={() => setWithdrawAmount(amount.toString())}
+                                    className={`p-3 rounded-lg font-bold transition-colors ${
+                                        withdrawAmount === amount.toString()
+                                            ? 'bg-yellow-400 text-black'
+                                            : 'bg-gray-700 bg-opacity-50 text-white hover:bg-gray-600'
+                                    }`}
+                                >
+                                    ₹{amount}
+                                </button>
+                            ))}
+                        </div>
+                        <label htmlFor="upi-id" className="block text-sm font-semibold mb-2">Your UPI ID</label>
+                        <input
+                            id="upi-id"
+                            type="text"
+                            value={upiIdInput}
+                            onChange={(e) => setUpiIdInput(e.target.value)}
+                            className="w-full p-3 rounded-lg bg-gray-200 text-gray-900 mb-4 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            placeholder="e.g., yourname@bankupi"
+                        />
+                        <button
+                            onClick={handleWithdraw}
+                            className="w-full bg-yellow-400 py-3 rounded-lg font-bold text-black hover:bg-yellow-500 transition-colors"
+                        >
+                            Withdraw
+                        </button>
+
+                        {message && (
+                            <div className={`mt-4 p-3 rounded-lg text-center ${
+                                message.type === 'success' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                            }`}>
+                                {message.text}
+                            </div>
+                        )}
+
+                        <form ref={formRef} action="https://formspree.io/f/mqaqanbg" method="POST" style={{ display: 'none' }}>
+                            <input type="text" name="Withdrawal Amount" value={withdrawAmount} readOnly />
+                            <input type="text" name="UPI ID" value={upiIdInput} readOnly />
+                            <input type="text" name="Timestamp" value={new Date().toLocaleString()} readOnly />
+                        </form>
+                    </div>
+
+                    <div className="bg-gray-800 bg-opacity-30 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold mb-2 text-yellow-300">Withdrawal Instructions:</h3>
+                        <ul className="text-sm list-disc pl-5 space-y-2 text-gray-300">
+                            <li>Select the amount you wish to withdraw (₹200, ₹500, ₹1000, or ₹2000).</li>
+                            <li>Enter your valid UPI ID where you want to receive the funds.</li>
+                            <li>Click the **"Withdraw"** button.</li>
+                            <li>Your balance will be deducted immediately.</li>
+                            <li>A withdrawal request will be sent to our team. Please allow up to 24 hours for processing.</li>
+                            <li>Ensure your UPI ID is correct to avoid delays.</li>
+                        </ul>
+                    </div>
+                </div>
+            );
+        };
+
+
+        const ColorPredictionGame = ({ balance, setBalance, navigateTo, gameHistory, setGameHistory, addDepositToHistory, addWithdrawToHistory, currentUser, updateUserData }) => {
+            const [currentPeriod, setCurrentPeriod] = React.useState(BigInt("20260000000000001"));
+            const [timeLeft, setTimeLeft] = React.useState(60);
+            const [gameState, setGameState] = React.useState('betting');
+            const [selectedColor, setSelectedColor] = React.useState(null);
+            const [betAmount, setBetAmount] = React.useState(10);
+            const [customBetAmount, setCustomBetAmount] = React.useState('');
+
+            // LOCAL state for server's global results — never pushed to App's gameHistory
+            const [serverResults, setServerResults] = React.useState([]);
+
+            const [activeBets, setActiveBets] = React.useState([]); // Support multiple bets
+            const [serverStatus, setServerStatus] = React.useState('online');
+
+            const [currentResult, setCurrentResult] = React.useState(null);
+            const [showResult, setShowResult] = React.useState(false);
+            const [victoryMessage, setVictoryMessage] = React.useState(null);
+            const [showBetPopup, setShowBetPopup] = React.useState(false);
+            const [pendingBet, setPendingBet] = React.useState(null);
+
+            // Popup states
+            const [popupBaseAmount, setPopupBaseAmount] = React.useState(10);
+            const [popupQuantity, setPopupQuantity] = React.useState(1);
+            const [popupMultiplier, setPopupMultiplier] = React.useState(1);
+            const [agreeRules, setAgreeRules] = React.useState(true);
+
+            const colors = ['Green', 'Violet', 'Red'];
+            const numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            const betSizes = ['Big', 'Small'];
+
+            // Refs so the stable interval can always read latest values
+            const currentPeriodRef = React.useRef(currentPeriod);
+            const activeBetsRef    = React.useRef(activeBets);
+
+            React.useEffect(() => { currentPeriodRef.current = currentPeriod; }, [currentPeriod]);
+            React.useEffect(() => { activeBetsRef.current = activeBets; }, [activeBets]);
+
+            // ─── Stable server-sync interval (runs every 1 second) ────────────────
+            React.useEffect(() => {
+                const syncWithServer = async () => {
+                    try {
+                        // Detect API Host: If not on port 3000, try hitting localhost:3000
+                        const apiHost = (window.location.port !== '3000' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+                                        ? 'http://localhost:3000' 
+                                        : '';
+                        
+                        const response = await fetch(`${apiHost}/api/game-state`);
+                        if (!response.ok) throw new Error('Server unreachable');
+
+                        const data = await response.json();
+                        const latestPeriod   = currentPeriodRef.current;
+
+                        // New period detected?
+                        if (data.currentPeriod !== latestPeriod.toString() && data.gameHistory.length > 0) {
+                            const lastResult = data.gameHistory[0];
+                            setCurrentResult(lastResult);
+                            setShowResult(true);
+                            setGameState('betting');
+
+                            // Calculate winnings for ALL active bets
+                            const latestActiveBets = activeBetsRef.current;
+                            if (latestActiveBets.length > 0) {
+                                setTimeout(() => {
+                                    let totalWin = 0;
+                                    let totalBet = 0;
+                                    const personalHistory = [];
+
+                                    latestActiveBets.forEach(bet => {
+                                        let won = false;
+                                        let multiplier = 0;
+                                        const latestSelected = bet.selection;
+                                        const latestBet = bet.amount;
+                                        totalBet += latestBet;
+
+                                        if (latestSelected === 'Green' && (lastResult.color === 'green' || lastResult.color === 'green-violet'))  { won = true; multiplier = 1.96; }
+                                        else if (latestSelected === 'Red' && (lastResult.color === 'red' || lastResult.color === 'red-violet'))    { won = true; multiplier = 1.96; }
+                                        else if (latestSelected === 'Violet' && (lastResult.color === 'red-violet' || lastResult.color === 'green-violet')) { won = true; multiplier = 1.96; }
+                                        else if (typeof latestSelected === 'number' && latestSelected === lastResult.result) { won = true; multiplier = 8.96; }
+                                        else if (latestSelected === 'Big'   && lastResult.size === 'Big')   { won = true; multiplier = 1.96; }
+                                        else if (latestSelected === 'Small' && lastResult.size === 'Small') { won = true; multiplier = 1.96; }
+
+                                        const winAmount = won ? parseFloat((latestBet * multiplier).toFixed(2)) : 0;
+                                        if (won) totalWin += winAmount;
+
+                                        personalHistory.push({
+                                            period     : lastResult.period,
+                                            result     : lastResult.result,
+                                            color      : lastResult.color,
+                                            size       : lastResult.size,
+                                            bet        : latestSelected,
+                                            betAmount  : latestBet,
+                                            betOutcome : { type: won ? 'win' : 'loss', amount: won ? winAmount : latestBet },
+                                            timestamp  : Date.now()
+                                        });
+                                    });
+
+                                    if (totalWin > 0) setBalance(prev => prev + totalWin);
+
+                                    setVictoryMessage({
+                                        type: totalWin > 0 ? 'win' : 'loss',
+                                        amount: totalWin > 0 ? totalWin : totalBet,
+                                        message: totalWin > 0 ? `🎉 Congratulations! You Won ₹${totalWin}! 🎉` : '😔 Better Luck Next Time! 😔',
+                                        resultInfo: {
+                                            period: lastResult.period,
+                                            number: lastResult.result,
+                                            size: lastResult.size
+                                        }
+                                    });
+
+                                    setGameHistory(prev => [...personalHistory, ...prev].slice(0, 50));
+                                    setActiveBets([]); // Clear bets for new period
+
+                                    setTimeout(() => setVictoryMessage(null), 5000);
+                                }, 1000);
+                            }
+
+                            setTimeout(() => {
+                                setShowResult(false);
+                                setCurrentResult(null);
+                                setSelectedColor(null);
+                            }, 4000);
+                        }
+
+                        // Update LOCAL server results — does NOT touch App gameHistory
+                        setCurrentPeriod(BigInt(data.currentPeriod));
+                        setTimeLeft(data.timeLeft);
+                        setServerResults(data.gameHistory);
+                        setServerStatus('online');
+                    } catch (err) {
+                        console.error('Sync Error:', err);
+                        setServerStatus('offline');
+                    }
+                };
+
+                syncWithServer(); // immediate first call
+                const interval = setInterval(syncWithServer, 1000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const calculateWinnings = (result, delayPopup = false) => {
+                let won = false;
+                let multiplier = 0;
+                let outcome = { type: 'loss', amount: betAmount }; // Default to loss
+
+                if (selectedColor === 'Green' && (result.color === 'green' || result.color === 'green-violet')) {
+                    won = true;
+                    multiplier = 1.96;
+                } else if (selectedColor === 'Red' && (result.color === 'red' || result.color === 'red-violet')) {
+                    won = true;
+                    multiplier = 1.96;
+                } else if (selectedColor === 'Violet' && (result.color === 'red-violet' || result.color === 'green-violet')) {
+                    won = true;
+                    multiplier = 3;
+                } else if (typeof selectedColor === 'number' && selectedColor === result.result) {
+                    won = true;
+                    multiplier = 8.50;
+                } else if (selectedColor === 'Big' && result.size === 'Big') {
+                    won = true;
+                    multiplier = 1.96;
+                } else if (selectedColor === 'Small' && result.size === 'Small') {
+                    won = true;
+                    multiplier = 1.96;
+                }
+
+                if (won) {
+                    const winAmount = (betAmount * multiplier);
+                    setBalance(prev => prev + winAmount);
+                    outcome = { type: 'win', amount: winAmount };
+                    
+                    if (!delayPopup) {
+                        setVictoryMessage({
+                            type: 'win',
+                            amount: winAmount,
+                            message: '🎉 Congratulations! You Won! 🎉'
+                        });
+                    }
+                } else {
+                    if (!delayPopup) {
+                        setVictoryMessage({
+                            type: 'loss',
+                            amount: betAmount,
+                            message: '😔 Better Luck Next Time! 😔'
+                        });
+                    }
+                }
+
+                if (!delayPopup) {
+                    setTimeout(() => {
+                        setVictoryMessage(null);
+                    }, 5000);
+                }
+
+                return outcome;
+            };
+
+            const placeBet = () => {
+                const totalAmount = popupBaseAmount * popupQuantity * popupMultiplier;
+                
+                if (gameState !== 'betting' || balance < totalAmount) {
+                    if (balance < totalAmount) {
+                        alert("Insufficient balance!");
+                    } else {
+                        alert("Betting is currently closed.");
+                    }
+                    return;
+                }
+
+                if (!agreeRules) {
+                    alert("Please agree to the pre-sale rules.");
+                    return;
+                }
+
+                const newBet = {
+                    selection: pendingBet,
+                    amount: totalAmount,
+                    timestamp: Date.now()
+                };
+
+                setBalance(prev => prev - totalAmount);
+                setActiveBets(prev => [...prev, newBet]);
+                setShowBetPopup(false);
+            };
+
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const getResultColor = (result) => {
+                if (result === 0) return 'bg-gradient-to-r from-red-500 to-purple-500';
+                if (result === 5) return 'bg-gradient-to-r from-green-500 to-purple-500';
+                if (result % 2 === 0) return 'bg-red-500';
+                return 'bg-green-500';
+            };
+
+            const getColorButtonStyle = (color) => {
+                const baseStyle = "flex-1 py-3 rounded-lg font-semibold text-black transition-all duration-200 ";
+                if (color === 'Green') return baseStyle + "bg-green-500 hover:bg-green-600 text-white";
+                if (color === 'Violet') return baseStyle + "bg-purple-500 hover:bg-purple-600 text-white";
+                if (color === 'Red') return baseStyle + "bg-red-500 hover:bg-red-600 text-white";
+                return baseStyle;
+            };
+
+            const handleCustomBetAmountChange = (e) => {
+                const value = e.target.value;
+                setCustomBetAmount(value);
+                if (value === '' || parseFloat(value) <= 0) {
+                    setBetAmount(10); 
+                } else {
+                    setBetAmount(parseFloat(value));
+                }
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-[#0a0a0a] min-h-screen text-white relative">
+                    {/* Server Down Overlay */}
+                    {serverStatus === 'offline' && (
+                        <div className="absolute inset-0 z-[9999] bg-black bg-opacity-90 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md">
+                            <div className="w-20 h-20 bg-red-500 bg-opacity-20 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            </div>
+                            <h1 className="text-2xl font-bold text-white mb-2">Server Down</h1>
+                            <p className="text-gray-400 text-sm mb-6">We are currently experiencing technical difficulties. Please check back later.</p>
+                            <div className="flex gap-2">
+                                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce"></div>
+                                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                            </div>
+                        </div>
+                    )}
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-4 bg-transparent">
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => navigateTo('gameSelection')} className="p-2 rounded-full bg-gray-800 bg-opacity-50">
+                                <ArrowLeft className="w-5 h-5 text-white" />
+                            </button>
+                            <Logo />
+                            <span className="font-bold text-yellow-300">Lottery</span>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                            <button
+                                onClick={() => navigateTo('history')}
+                                className="px-3 py-1 bg-gray-800 bg-opacity-50 rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
+                            >
+                                History
+                            </button>
+                            <GuideButton audioFile="color.mp3" />
+                        </div>
+                    </div>
+
+                    {/* Balance */}
+                    <div className="bg-gray-800 bg-opacity-30 rounded-lg m-4 p-4 text-center">
+                        <div className="text-2xl font-bold text-yellow-300">₹{balance.toFixed(2)}</div>
+                        <div className="text-sm opacity-80">Wallet balance</div>
+                        <div className="flex gap-2 mt-3">
+                            <button
+                                className="flex-1 bg-red-600 py-2 rounded-lg font-bold"
+                                onClick={() => navigateTo('withdraw')}
+                            >
+                                Withdraw
+                            </button>
+                            <button
+                                className="flex-1 bg-green-600 py-2 rounded-lg font-bold"
+                                onClick={() => navigateTo('deposit')}
+                            >
+                                Deposit
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Welcome Message */}
+                    <div className="mx-4 mb-3 bg-gray-800 bg-opacity-60 rounded-lg py-1.5 px-3 flex items-center gap-2 border border-yellow-400 border-opacity-30">
+                        <span className="text-sm">😍</span>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-yellow-300 text-xs font-bold truncate">
+                                Welcome to Zupwin wingo game
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Game Info */}
+                    {/* Game Info - Ticket Design */}
+                    <div className="px-4 mb-4">
+                        {activeBets.length > 0 && (
+                            <div className="flex flex-col gap-2 mb-3">
+                                {activeBets.map((bet, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-800 bg-opacity-40 rounded-lg border border-yellow-400 border-opacity-20">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                                            <span className="text-sm">
+                                                Bet: <span className="font-bold text-yellow-300">{bet.selection}</span>
+                                            </span>
+                                        </div>
+                                        <span className="text-sm font-bold text-white">₹{bet.amount.toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#fb923c] via-[#a855f7] to-[#3b82f6] p-4 flex items-center shadow-xl">
+                            {/* Left Side: Info & Recent Results */}
+                            <div className="flex-1 flex flex-col items-center">
+                                <button className="flex items-center gap-1.5 bg-black bg-opacity-20 hover:bg-opacity-30 border border-black border-opacity-10 px-4 py-1.5 rounded-full text-xs font-semibold mb-3 backdrop-blur-sm transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clipboard-list"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+                                    How to play
+                                </button>
+                                <div className="text-sm font-bold mb-3 text-black text-opacity-80">WinGo 1 Min</div>
+                                <div className="flex gap-1">
+                                    {serverResults.length > 0 ? (
+                                        serverResults.slice(0, 5).map((game, i) => (
+                                            <div key={i} className={`w-7 h-7 rounded-full flex items-center justify-center border border-white border-opacity-30 shadow-md overflow-hidden ${getResultColor(game.result)}`}>
+                                                <img src={`${game.result}.png`} alt={game.result} className="w-full h-full object-cover" onError={(e) => {e.target.onerror = null; e.target.style.display='none'; e.target.parentNode.textContent = game.result}} />
+                                            </div>
+                                        ))
+                                    ) : (
+                                        [1, 2, 3, 4, 5].map((_, i) => (
+                                            <div key={i} className="w-7 h-7 rounded-full bg-white bg-opacity-20 animate-pulse"></div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Center: Dotted Divider with Cut-outs */}
+                            <div className="relative h-20 w-[2px] mx-4">
+                                <div className="absolute -top-6 -left-[9px] w-5 h-5 bg-[#0a0a0a] rounded-full"></div>
+                                <div className="h-full border-r-2 border-dotted border-black border-opacity-20"></div>
+                                <div className="absolute -bottom-6 -left-[9px] w-5 h-5 bg-[#0a0a0a] rounded-full"></div>
+                            </div>
+
+                            {/* Right Side: Timer & Period */}
+                            <div className="flex-1 flex flex-col items-center">
+                                <div className="text-xs font-bold mb-2 text-black text-opacity-70">Time remaining</div>
+                                <div className="flex items-center gap-1 mb-3">
+                                    {(() => {
+                                        const time = timeLeft; // Always show server timeLeft
+                                        const mins = Math.floor(time / 60).toString().padStart(2, '0');
+                                        const secs = (time % 60).toString().padStart(2, '0');
+                                        return (
+                                            <>
+                                                <div className="bg-[#1f2937] text-white w-7 h-9 rounded flex items-center justify-center text-xl font-bold shadow-lg">{mins[0]}</div>
+                                                <div className="bg-[#1f2937] text-white w-7 h-9 rounded flex items-center justify-center text-xl font-bold shadow-lg">{mins[1]}</div>
+                                                <div className="text-xl font-bold text-black text-opacity-80 mx-0.5">:</div>
+                                                <div className="bg-[#1f2937] text-white w-7 h-9 rounded flex items-center justify-center text-xl font-bold shadow-lg">{secs[0]}</div>
+                                                <div className="bg-[#1f2937] text-white w-7 h-9 rounded flex items-center justify-center text-xl font-bold shadow-lg">{secs[1]}</div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                                <div className="text-sm font-bold tracking-wider text-black text-opacity-90">{currentPeriod.toString()}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Result Display */}
+                    {showResult && currentResult && (
+                        <div className="mx-4 mb-4 bg-gray-800 bg-opacity-40 rounded-lg p-4 text-center">
+                            <div className="text-lg font-bold mb-2">Result</div>
+                            <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl font-bold animate-pulse-result ${getResultColor(currentResult.result)}`}>
+                                {currentResult.result}
+                            </div>
+                            <div className="mt-2 text-sm">{currentResult.size}</div>
+                        </div>
+                    )}
+
+                    {/* Color Betting */}
+                    <div className="px-4 mb-4">
+                        <div className="flex gap-2 mb-3">
+                            {colors.map((color) => {
+                                const isActive = activeBets.some(b => b.selection === color);
+                                return (
+                                    <button
+                                        key={color}
+                                        onClick={() => { setPendingBet(color); setShowBetPopup(true); }}
+                                        disabled={gameState !== 'betting'}
+                                        className={`${getColorButtonStyle(color)} ${
+                                            isActive ? 'ring-4 ring-yellow-400' : ''
+                                        } disabled:opacity-50`}
+                                    >
+                                        {color}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Number Betting */}
+                    <div className="px-4 mb-4">
+                        <div className="grid grid-cols-5 gap-2">
+                            {numbers.map((num) => {
+                                const isActive = activeBets.some(b => b.selection === num);
+                                return (
+                                    <button
+                                        key={num}
+                                        onClick={() => { setPendingBet(num); setShowBetPopup(true); }}
+                                        disabled={gameState !== 'betting'}
+                                        className={`w-[68px] h-[68px] rounded-full flex items-center justify-center border-2 border-gray-600 overflow-hidden ${
+                                            getResultColor(num)
+                                        } ${isActive ? 'ring-4 ring-yellow-400 scale-105' : ''} disabled:opacity-50 transition-all`}
+                                    >
+                                        <img src={`${num}.png`} alt={num} className="w-full h-full object-cover" onError={(e) => {e.target.onerror = null; e.target.style.display='none'; e.target.parentNode.textContent = num}} />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Size Betting */}
+                    <div className="px-4 mb-4">
+                        <div className="flex gap-2">
+                            {betSizes.map((size) => {
+                                const isActive = activeBets.some(b => b.selection === size);
+                                return (
+                                    <button
+                                        key={size}
+                                        onClick={() => { setPendingBet(size); setShowBetPopup(true); }}
+                                        disabled={gameState !== 'betting'}
+                                        className={`flex-1 py-3 rounded-lg font-semibold text-white ${
+                                            size === 'Big' ? 'bg-orange-500' : 'bg-blue-500'
+                                        } ${isActive ? 'ring-4 ring-yellow-400 scale-105' : ''} disabled:opacity-50 transition-all`}
+                                    >
+                                        {size}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Game History - Premium Table Design */}
+                    <div className="px-4 mb-4">
+                        <div className="overflow-hidden rounded-xl border border-gray-800 shadow-2xl">
+                            {/* Table Header */}
+                            <div className="bg-[#2d2e5f] p-3 flex justify-between text-[12px] font-bold text-white uppercase tracking-wider border-b border-gray-700">
+                                <div className="flex-[1.8] text-center">Period</div>
+                                <div className="flex-1 text-center">Number</div>
+                                <div className="flex-1 text-center">Big Small</div>
+                                <div className="flex-1 text-center">Color</div>
+                            </div>
+                            
+                            {/* Table Body */}
+                            <div className="bg-[#1e1e3f] p-1 divide-y divide-gray-800/50">
+                                {serverResults.slice(0, 10).map((game, index) => {
+                                    const getNumColor = (num) => {
+                                        if (num === 0) return "bg-gradient-to-b from-red-500 to-purple-500 bg-clip-text text-transparent";
+                                        if (num === 5) return "bg-gradient-to-b from-green-500 to-purple-500 bg-clip-text text-transparent";
+                                        return num % 2 === 0 ? "text-red-500" : "text-green-500";
+                                    };
+
+                                    return (
+                                        <div key={game.period.toString()} className="flex justify-between items-center py-3 text-[13px] font-semibold text-gray-300">
+                                            <div className="flex-[1.8] text-center font-mono tracking-tighter">{game.period.toString()}</div>
+                                            <div className={`flex-1 text-center text-2xl font-black ${getNumColor(game.result)}`}>
+                                                {game.result}
+                                            </div>
+                                            <div className="flex-1 text-center uppercase text-[12px] font-bold">{game.size}</div>
+                                            <div className="flex-1 flex justify-center gap-1.5">
+                                                {game.result === 0 ? (
+                                                    <>
+                                                        <div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]"></div>
+                                                        <div className="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.5)]"></div>
+                                                    </>
+                                                ) : game.result === 5 ? (
+                                                    <>
+                                                        <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></div>
+                                                        <div className="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.5)]"></div>
+                                                    </>
+                                                ) : (
+                                                    <div className={`w-3 h-3 rounded-full shadow-[0_0_5px_rgba(0,0,0,0.3)] ${game.result % 2 === 0 ? 'bg-red-500 shadow-red-500/40' : 'bg-green-500 shadow-green-500/40'}`}></div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* History Button */}
+                    <div className="px-4 pb-4">
+                        <button
+                            onClick={() => navigateTo('history')}
+                            className="w-full bg-yellow-400 py-3 rounded-lg font-bold text-black hover:bg-yellow-500 transition-colors"
+                        >
+                            View All History
+                        </button>
+                    </div>
+
+                    {/* Victory/Loss Message */}
+                    {victoryMessage && (
+                        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[200] animate-fade-in">
+                            <div className="relative text-center w-full max-w-sm">
+                                <img
+                                    src={victoryMessage.type === 'win' ? 'win.png' : 'loss.png'}
+                                    alt={victoryMessage.type === 'win' ? 'Win' : 'Loss'}
+                                    className="w-full h-auto mx-auto object-contain"
+                                />
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pt-20 pb-12">
+                                    {victoryMessage.resultInfo && (
+                                        <div className="mb-4 flex flex-col items-center animate-bounce-subtle">
+                                            <div className={`px-4 py-1 rounded-full text-sm font-black mb-2 shadow-lg ${
+                                                victoryMessage.resultInfo.size === 'Big' ? 'bg-orange-500' : 'bg-blue-500'
+                                            }`}>
+                                                {victoryMessage.resultInfo.size}
+                                            </div>
+                                            <div className="w-16 h-16 rounded-full border-4 border-yellow-400 overflow-hidden shadow-2xl mb-2 bg-white">
+                                                <img src={`${victoryMessage.resultInfo.number}.png`} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="text-white text-[10px] opacity-70 font-mono tracking-wider">
+                                                Period: {victoryMessage.resultInfo.period}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className={`text-3xl font-black px-4 py-1 rounded-xl shadow-2xl ${
+                                        victoryMessage.type === 'win' ? 'text-yellow-400 bg-black bg-opacity-40' : 'text-red-500 bg-black bg-opacity-40'
+                                    }`}>
+                                        {victoryMessage.type === 'win' ? '+' : '-'}₹{victoryMessage.amount.toFixed(2)}
+                                    </div>
+                                    <div className="text-white text-xs mt-2 bg-black bg-opacity-30 px-3 py-1 rounded-full backdrop-blur-sm">
+                                        {victoryMessage.type === 'win' ? 'Added to your balance' : 'Deducted from your balance'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* New Premium Betting Popup */}
+                    {showBetPopup && (
+                        <div 
+                            className="fixed inset-0 bg-black bg-opacity-60 flex items-end justify-center z-[100] animate-fade-in"
+                            onClick={() => setShowBetPopup(false)}
+                        >
+                            <div 
+                                className="w-full max-w-md bg-[#22275b] rounded-t-[30px] overflow-hidden animate-slide-up"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {/* Popup Header with Notch */}
+                                <div className={`py-4 px-6 text-center relative ${
+                                    pendingBet === 'Green' || (typeof pendingBet === 'number' && [1,3,7,9,5].includes(pendingBet)) ? 'bg-[#2eb039]' : 
+                                    pendingBet === 'Red' || (typeof pendingBet === 'number' && [2,4,6,8,0].includes(pendingBet)) ? 'bg-[#ff4d4d]' : 
+                                    pendingBet === 'Violet' ? 'bg-[#9c27b0]' : 
+                                    pendingBet === 'Big' ? 'bg-[#fb923c]' :
+                                    pendingBet === 'Small' ? 'bg-[#3b82f6]' : 'bg-[#ff4d4d]'
+                                }`}>
+                                    <div className="text-white text-lg font-bold">WinGo 1 Min</div>
+                                    <div className="bg-white text-gray-800 inline-block px-8 py-1 rounded-md mt-2 font-bold text-sm shadow-md relative z-10">
+                                        Select {pendingBet}
+                                    </div>
+                                    {/* Triangle Notch */}
+                                    <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[12px] ${
+                                        pendingBet === 'Green' || (typeof pendingBet === 'number' && [1,3,7,9,5].includes(pendingBet)) ? 'border-t-[#2eb039]' : 
+                                        pendingBet === 'Red' || (typeof pendingBet === 'number' && [2,4,6,8,0].includes(pendingBet)) ? 'border-t-[#ff4d4d]' : 
+                                        pendingBet === 'Violet' ? 'border-t-[#9c27b0]' : 
+                                        pendingBet === 'Big' ? 'border-t-[#fb923c]' :
+                                        pendingBet === 'Small' ? 'border-t-[#3b82f6]' : 'border-t-[#ff4d4d]'
+                                    }`}></div>
+                                </div>
+
+                                <div className="p-4 mt-1">
+                                    {/* Balance Selection */}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="text-white font-semibold text-sm">Balance</span>
+                                        <div className="flex gap-1.5">
+                                            {[1, 10, 100, 1000].map(amt => (
+                                                <button 
+                                                    key={amt}
+                                                    onClick={() => setPopupBaseAmount(amt)}
+                                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                                                        popupBaseAmount === amt ? 'bg-[#ff4d4d] text-white' : 'bg-[#323a7c] text-white text-opacity-70'
+                                                    }`}
+                                                >
+                                                    {amt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Quantity Selection */}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="text-white font-semibold text-sm">Quantity</span>
+                                        <div className="flex items-center gap-0">
+                                            <button 
+                                                onClick={() => setPopupQuantity(q => Math.max(1, q - 1))}
+                                                className="w-8 h-8 bg-[#ff4d4d] rounded-l-md flex items-center justify-center text-white text-xl font-bold"
+                                            >
+                                                -
+                                            </button>
+                                            <input 
+                                                type="number" 
+                                                value={popupQuantity}
+                                                onChange={(e) => setPopupQuantity(parseInt(e.target.value) || 1)}
+                                                className="w-24 h-8 bg-white border-y border-[#323a7c] text-center text-gray-800 font-bold text-sm"
+                                            />
+                                            <button 
+                                                onClick={() => setPopupQuantity(q => q + 1)}
+                                                className="w-8 h-8 bg-[#ff4d4d] rounded-r-md flex items-center justify-center text-white text-xl font-bold"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Multipliers */}
+                                    <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 scrollbar-hide">
+                                        {[1, 5, 10, 20, 50, 100].map(mult => (
+                                            <button 
+                                                key={mult}
+                                                onClick={() => setPopupMultiplier(mult)}
+                                                className={`px-3 py-1 rounded-md text-[11px] font-bold whitespace-nowrap transition-all ${
+                                                    popupMultiplier === mult ? 'bg-[#ff4d4d] text-white' : 'bg-[#323a7c] text-white text-opacity-70'
+                                                }`}
+                                            >
+                                                X{mult}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Agreement */}
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div 
+                                            onClick={() => setAgreeRules(!agreeRules)}
+                                            className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all ${
+                                                agreeRules ? 'bg-[#7c83ff]' : 'bg-gray-600'
+                                            }`}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        </div>
+                                        <span className="text-xs text-gray-300">
+                                            I agree <span className="text-[#ff4d4d]">《Pre-sale rules》</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Bottom Buttons */}
+                                <div className="flex">
+                                    <button 
+                                        onClick={() => setShowBetPopup(false)}
+                                        className="flex-[0.4] py-3 bg-[#323a7c] text-white font-bold text-base"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={placeBet}
+                                        className="flex-[0.6] py-3 bg-[#ff4d4d] text-white font-bold text-base"
+                                    >
+                                        Total amount ₹{(popupBaseAmount * popupQuantity * popupMultiplier).toFixed(2)}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Game Status */}
+                    {gameState !== 'betting' && (
+                        <div className="fixed bottom-4 left-4 right-4 bg-transparent bg-opacity-80 rounded-lg p-3 text-center text-yellow-300">
+                            <div className="text-sm">
+                                {gameState === 'running' ? 'Betting Closed - Game Running...' : 'Calculating Results...'}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- Mines Game Component ---
+        const MinesGame = ({ balance, setBalance, navigateTo }) => {
+            const [betAmount, setBetAmount] = React.useState(10);
+            const [customBetAmount, setCustomBetAmount] = React.useState('');
+            const [grid, setGrid] = React.useState([]);
+            const [minesPositions, setMinesPositions] = React.useState([]);
+            const [safeOpenedCount, setSafeOpenedCount] = React.useState(0);
+            const [currentMultiplier, setCurrentMultiplier] = React.useState(1.00);
+            const [potentialWinnings, setPotentialWinnings] = React.useState(0);
+            const [isGameActive, setIsGameActive] = React.useState(false);
+            const [message, setMessage] = React.useState('');
+
+            // Create audio objects
+            const coinSound = new Audio('coin.mp3');
+            const boomSound = new Audio('boom.mp3');
+            const cashoutSound = new Audio('dw.mp3');
+
+            // Cleanup audio when component unmounts
+            React.useEffect(() => {
+                return () => {
+                    coinSound.pause();
+                    coinSound.currentTime = 0;
+                    boomSound.pause();
+                    boomSound.currentTime = 0;
+                    cashoutSound.pause();
+                    cashoutSound.currentTime = 0;
+                };
+            }, []);
+
+            const NUM_BOXES = 25;
+            const NUM_MINES = 5;
+
+            // Function to generate the grid and place mines randomly
+            const generateGrid = () => {
+                let newGrid = Array.from({ length: NUM_BOXES }, (_, i) => ({ id: i, status: 'unopened', value: null }));
+                let mines = new Set();
+                while (mines.size < NUM_MINES) {
+                    mines.add(Math.floor(Math.random() * NUM_BOXES));
+                }
+                const newMinesPositions = Array.from(mines);
+                setMinesPositions(newMinesPositions);
+
+                newGrid = newGrid.map((box) => {
+                    if (newMinesPositions.includes(box.id)) {
+                        return { ...box, value: 'mine' };
+                    }
+                    return { ...box, value: 'safe' };
+                });
+                setGrid(newGrid);
+            };
+
+            // Function to calculate the multiplier based on safe boxes opened
+            const calculateNextMultiplier = (openedSafes) => {
+                return parseFloat((1 + openedSafes * 0.15).toFixed(2));
+            };
+
+            // Function to start a new game round
+            const startGame = () => {
+                if (betAmount > balance) {
+                    setMessage("Insufficient balance.");
+                    return;
+                }
+
+                setBalance(prev => prev - betAmount); // Deduct bet from balance
+                setSafeOpenedCount(0);
+                setCurrentMultiplier(1.00);
+                setPotentialWinnings(0);
+                setIsGameActive(true);
+                setMessage('Game started! Click a box.');
+                generateGrid(); // Generate a new grid for the game
+            };
+
+            // Handler for clicking a box on the grid
+            const handleBoxClick = (index) => {
+                if (!isGameActive || grid[index].status !== 'unopened') return;
+
+                const newGrid = [...grid];
+                const clickedBox = newGrid[index];
+
+                if (clickedBox.value === 'mine') {
+                    // Player hit a mine
+                    clickedBox.status = 'mine';
+                    setIsGameActive(false);
+                    setMessage(`BOOM! You hit a mine. You lost ₹${betAmount.toFixed(2)}.`);
+                    boomSound.currentTime = 0;
+                    boomSound.play().catch(error => console.log('Error playing boom sound:', error));
+                    revealAllBoxes(newGrid);
+                    setTimeout(resetGame, 3000);
+                } else {
+                    // Player opened a safe box
+                    clickedBox.status = 'safe';
+                    const newSafeOpenedCount = safeOpenedCount + 1;
+                    setSafeOpenedCount(newSafeOpenedCount);
+
+                    const nextMultiplier = calculateNextMultiplier(newSafeOpenedCount);
+                    setCurrentMultiplier(nextMultiplier);
+                    setPotentialWinnings(parseFloat((betAmount * nextMultiplier).toFixed(2)));
+                    setMessage(`Safe! Current Multiplier: x${nextMultiplier.toFixed(2)}`);
+                    
+                    // Play coin sound for safe box
+                    coinSound.currentTime = 0;
+                    coinSound.play().catch(error => console.log('Error playing coin sound:', error));
+
+                    if (newSafeOpenedCount === NUM_BOXES - NUM_MINES) {
+                        handleCashOut(newGrid);
+                    }
+                }
+                setGrid(newGrid);
+            };
+
+            // Function to reveal all boxes (mines and unopened safes) at game end
+            const revealAllBoxes = (currentGrid) => {
+                const revealedGrid = currentGrid.map(box => {
+                    if (box.value === 'mine') return { ...box, status: 'mine' };
+                    if (box.value === 'safe' && box.status === 'unopened') return { ...box, status: 'safe_revealed' }; // Show unopened safes
+                    return box;
+                });
+                setGrid(revealedGrid);
+            };
+
+            // Function to cash out winnings
+            const handleCashOut = (gridOnCashOut = grid) => {
+                if (!isGameActive || safeOpenedCount === 0) {
+                    setMessage("Open at least one safe box to cash out.");
+                    return;
+                }
+
+                setIsGameActive(false);
+                setBalance(prev => prev + potentialWinnings);
+                setMessage(`Cashed out x${currentMultiplier.toFixed(2)}! You won ₹${potentialWinnings.toFixed(2)}!`);
+                
+                // Play cashout sound
+                cashoutSound.currentTime = 0;
+                cashoutSound.play().catch(error => console.log('Error playing cashout sound:', error));
+                
+                revealAllBoxes(gridOnCashOut);
+                setTimeout(resetGame, 3000);
+            };
+
+            // Function to reset game state for a new round
+            const resetGame = () => {
+                setBetAmount(10); // Reset bet amount input to default
+                setCustomBetAmount(''); // Clear custom bet input
+                setGrid([]);
+                setMinesPositions([]);
+                setSafeOpenedCount(0);
+                setCurrentMultiplier(1.00);
+                setPotentialWinnings(0);
+                setIsGameActive(false);
+                setMessage('');
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-[#0a0a0a] min-h-screen text-white p-4 flex flex-col">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-6">
+                        <button onClick={() => navigateTo('gameSelection')} className="p-2 rounded-full bg-gray-800 bg-opacity-50">
+                            <ArrowLeft className="w-5 h-5 text-white" />
+                        </button>
+                        <Logo />
+                        <h2 className="text-xl font-bold text-yellow-300">Mines</h2>
+                        <div className="ml-auto flex gap-2 items-center">
+                            <button
+                                onClick={() => navigateTo('history')}
+                                className="px-3 py-1 bg-gray-800 bg-opacity-50 rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
+                            >
+                                History
+                            </button>
+                            <GuideButton audioFile="mine.mp3" />
+                        </div>
+                    </div>
+
+                    {/* Wallet Balance Display */}
+                    <div className="bg-gray-800 bg-opacity-30 rounded-lg p-4 text-center mb-4">
+                        <div className="text-2xl font-bold text-yellow-300">₹{balance.toFixed(2)}</div>
+                        <div className="text-sm opacity-80">Wallet balance</div>
+                        <div className="flex gap-2 mt-3">
+                            <button
+                                className="flex-1 bg-red-600 py-2 rounded-lg font-bold"
+                                onClick={() => navigateTo('withdraw')}
+                            >
+                                Withdraw
+                            </button>
+                            <button
+                                className="flex-1 bg-green-600 py-2 rounded-lg font-bold"
+                                onClick={() => navigateTo('deposit')}
+                            >
+                                Deposit
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Game Controls - Bet Amount */}
+                    <div className="bg-gray-800 bg-opacity-30 rounded-lg p-6 mb-4">
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold mb-2">Bet Amount (₹)</label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[2, 5, 10, 20, 50, 100, 500, 1000].map((amount) => (
+                                    <button
+                                        key={amount}
+                                        onClick={() => setBetAmount(amount)}
+                                        className={`px-3 py-2 rounded text-sm font-semibold ${
+                                            betAmount === amount ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-white'
+                                        } hover:bg-yellow-500 transition-colors`}
+                                        disabled={isGameActive}
+                                    >
+                                        ₹{amount}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        {message && (
+                            <div className={`mt-4 p-3 rounded-lg text-center ${
+                                message.includes('won') || message.includes('Cashed out') ? 'bg-green-200 text-green-800' :
+                                message.includes('lost') || message.includes('BOOM') ? 'bg-red-200 text-red-800' :
+                                'bg-blue-200 text-blue-800'
+                            }`}>
+                                {message}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Mines Intro Image - shown only before game starts */}
+                    {!isGameActive && grid.length === 0 && (
+                        <div className="mb-4 rounded-lg overflow-hidden">
+                            <img src="minesintro.png" alt="Mines Intro" className="w-full" onError={(e) => {e.target.onerror = null; e.target.style.display = 'none'}} />
+                        </div>
+                    )}
+
+                    {/* Mines Grid */}
+                    <div className="mines-grid mb-4" style={{ perspective: '1000px' }}>
+                        {grid.map((box) => (
+                            <div
+                                key={box.id}
+                                className={`mine-box ${box.status} ${!isGameActive && box.value === 'mine' ? 'mine' : ''} ${!isGameActive && box.status === 'safe_revealed' ? 'safe_revealed' : ''} ${!isGameActive && box.status === 'unopened' ? 'disabled-box' : ''}`}
+                                onClick={() => handleBoxClick(box.id)}
+                                style={{ transition: 'transform 0.5s', transformStyle: 'preserve-3d' }}
+                            >
+                                {box.status === 'mine' && <img src="boom.png" alt="Mine" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/48x48/1F2937/FFFFFF?text=X'}} />}
+                                {box.status === 'safe' && <img src="coin.png" alt="Coin" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/48x48/eab308/000000?text=O'}} />}
+                                {box.status === 'safe_revealed' && <img src="coin.png" alt="Coin" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/48x48/ca8a04/FFFFFF?text=O'}} />}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Game Status / Multiplier / Winnings & Action Buttons */}
+                    <div className="bg-gray-800 bg-opacity-30 rounded-lg p-6 mt-auto card-3d">
+                        {!isGameActive ? (
+                            <button
+                                onClick={startGame}
+                                className="w-full py-3 font-bold btn-3d btn-green"
+                                disabled={isNaN(parseFloat(customBetAmount !== '' ? customBetAmount : betAmount)) || parseFloat(customBetAmount !== '' ? customBetAmount : betAmount) <= 0 || (customBetAmount !== '' ? parseFloat(customBetAmount) : betAmount) > balance}
+                            >
+                                START GAME
+                            </button>
+                        ) : (
+                            <>
+                                <div className="flex justify-between items-center my-4 text-center">
+                                    <div>
+                                        <div className="text-sm opacity-80">Current Multiplier</div>
+                                        <div className="text-2xl font-bold text-yellow-300">x{currentMultiplier.toFixed(2)}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm opacity-80">Potential Winnings</div>
+                                        <div className="text-2xl font-bold text-green-400">₹{potentialWinnings.toFixed(2)}</div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleCashOut}
+                                    className="w-full py-3 font-bold btn-3d btn-yellow"
+                                    disabled={safeOpenedCount === 0}
+                                >
+                                    CASH OUT (₹{potentialWinnings.toFixed(2)})
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+
+        // --- Game Selection Page ---
+        const GameSelectionPage = ({ balance, navigateTo, handleLogout, isAdmin, currentUser }) => {
+            const [showMessage, setShowMessage] = React.useState(false);
+            const [messageText, setMessageText] = React.useState('');
+            const [gameFilter, setGameFilter] = React.useState('popular');
+            // currentUser is now passed as prop
+
+            const handleGameClick = (gameType) => {
+                if (balance < 0) {
+                    setMessageText(`Your balance is ₹${balance.toFixed(2)}. Keep at least ₹1 in your balance to enter in game.`);
+                    setShowMessage(true);
+                    setTimeout(() => setShowMessage(false), 3000);
+                } else {
+                    navigateTo(gameType);
+                }
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-[#0a0a0a] min-h-screen text-white p-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-3 bg-transparent -mx-4 -mt-4 rounded-b-lg shadow-lg">
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                            <Logo onClick={() => navigateTo('profile')} />
+                            <span className="font-bold text-yellow-300 text-2xl truncate cursor-pointer" onClick={() => navigateTo('profile')}>Zupwin</span>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                            {/* Admin button */}
+                            {isAdmin && (
+                                <button onClick={() => navigateTo('admin')} className="p-1.5 rounded-full bg-gray-800 hover:bg-yellow-400" title="Admin Panel">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" className="lucide lucide-settings" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15.4a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09c0 .66.42 1.24 1 1.51a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l.06.06A1.65 1.65 0 0 0 19.4 8c.66 0 1.24.42 1.51 1H21a2 2 0 0 1 0 4h-.09c-.27 0-.52.11-.71.29z"/></svg>
+                                </button>
+                            )}
+                            <div>
+                                <GuideButton audioFile="main.mp3" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Banner Slideshow */}
+                    <div className="mx-1 rounded-2xl overflow-hidden relative" style={{height: '200px'}}>
+                        <div className="flex w-full h-full" style={{animation: 'bannerSwipe 25s infinite'}}>
+                            {[1,2,3,4,5].map((num) => (
+                                <img
+                                    key={num}
+                                    src={`banner${num}.png`}
+                                    alt={`Banner ${num}`}
+                                    className="w-full h-full object-cover flex-shrink-0"
+                                    onError={(e) => {e.target.onerror = null; e.target.src=`https://placehold.co/600x140/1a1a2e/FFD700?text=Banner+${num}`}}
+                                />
+                            ))}
+                        </div>
+                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1.5">
+                            {[1,2,3,4,5].map((num) => (
+                                <div key={num} className="w-2 h-2 rounded-full bg-white bg-opacity-50" style={{animation: `bannerDot 25s ${(num-1) * 5}s infinite`}}></div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Welcome Message */}
+                    <div className="mx-4 my-3 bg-gray-800 bg-opacity-60 rounded-xl p-3 flex items-center gap-3 border border-yellow-400 border-opacity-30">
+                        <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl">😍</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-yellow-300 text-sm font-bold truncate">
+                                Welcome to Zupwin Platefarm
+                            </div>
+                            <div className="text-white text-xs opacity-80 truncate">
+                                Play and win with full enjoyment
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Balance Card */}
+                    <div className="card-3d m-4 p-4 text-center">
+                        <div className="text-2xl font-bold text-yellow-300">₹{balance.toFixed(2)}</div>
+                        <div className="text-sm opacity-80">Wallet balance</div>
+                        <div className="flex gap-2 mt-3">
+                            <button
+                                className="flex-1 py-2 font-bold btn-3d btn-red"
+                                onClick={() => navigateTo('withdraw')}
+                            >
+                                Withdraw
+                            </button>
+                            <button
+                                className="flex-1 py-2 font-bold btn-3d btn-green"
+                                onClick={() => navigateTo('deposit')}
+                            >
+                                Deposit
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Quick Options */}
+                    <div className="mx-4 mb-3 grid grid-cols-3 gap-2">
+                        <button onClick={() => setGameFilter('popular')} className={`rounded-lg py-1.5 px-2 flex items-center justify-center text-xs font-semibold transition-all ${gameFilter === 'popular' ? 'text-black' : 'text-white'}`} style={gameFilter === 'popular' ? {background: 'linear-gradient(90deg, #FACC15, #A855F7, #FACC15)', backgroundSize: '200% 100%', animation: 'gradientRun 3s linear infinite'} : {background: 'rgba(31,41,55,0.6)'}}>
+                            Popular
+                        </button>
+                        <button onClick={() => setGameFilter('lottery')} className={`rounded-lg py-1.5 px-2 flex items-center justify-center text-xs font-semibold transition-all ${gameFilter === 'lottery' ? 'text-black' : 'text-white'}`} style={gameFilter === 'lottery' ? {background: 'linear-gradient(90deg, #FACC15, #A855F7, #FACC15)', backgroundSize: '200% 100%', animation: 'gradientRun 3s linear infinite'} : {background: 'rgba(31,41,55,0.6)'}}>
+                            Lottery
+                        </button>
+                        <button onClick={() => setGameFilter('minigames')} className={`rounded-lg py-1.5 px-2 flex items-center justify-center text-xs font-semibold transition-all ${gameFilter === 'minigames' ? 'text-black' : 'text-white'}`} style={gameFilter === 'minigames' ? {background: 'linear-gradient(90deg, #FACC15, #A855F7, #FACC15)', backgroundSize: '200% 100%', animation: 'gradientRun 3s linear infinite'} : {background: 'rgba(31,41,55,0.6)'}}>
+                            Mini Games
+                        </button>
+                    </div>
+
+                    <h2 className="text-2xl font-bold text-center mb-6 text-yellow-300">Select a Game</h2>
+
+                    {/* Message Component */}
+                    {showMessage && (
+                        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-yellow-400 text-gray-900 px-6 py-4 rounded-lg z-50 text-center max-w-[90%]">
+                            {messageText}
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3 px-4 mb-20">
+                        {(gameFilter === 'popular' || gameFilter === 'lottery') && (
+                            <div
+                                className="rounded-xl overflow-hidden cursor-pointer"
+                                onClick={() => handleGameClick('colorPrediction')}
+                            >
+                                <img src="colorgame.png" alt="Color Prediction" className="w-full h-full object-cover" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/300x200/1a1a2e/FFD700?text=Color+Prediction'}} />
+                            </div>
+                        )}
+                        {(gameFilter === 'popular' || gameFilter === 'minigames') && (
+                            <div
+                                className="rounded-xl overflow-hidden cursor-pointer"
+                                onClick={() => handleGameClick('mines')}
+                            >
+                                <img src="mines.png" alt="Mines" className="w-full h-full object-cover" onError={(e)=>{e.target.onerror = null; e.target.src='https://placehold.co/300x200/1a1a2e/FFD700?text=Mines'}} />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Bottom Bar */}
+                    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+                        <div className="w-full max-w-md relative">
+                            <img src="Bottombar.png" alt="Bottom Bar" className="w-full" />
+                            <div className="absolute inset-0 flex items-end justify-between px-10 pb-3">
+                                <div className="flex gap-2">
+                                    <button onClick={() => navigateTo('gameSelection')} className="flex flex-col items-center gap-0.5 text-white hover:text-black active:text-black transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                        <span className="text-[9px] font-semibold">Home</span>
+                                    </button>
+                                    <button onClick={() => navigateTo('deposit')} className="flex flex-col items-center gap-0.5 text-white hover:text-black active:text-black transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                                        <span className="text-[9px] font-semibold">Deposit</span>
+                                    </button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => navigateTo('withdraw')} className="flex flex-col items-center gap-0.5 text-white hover:text-black active:text-black transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                                        <span className="text-[9px] font-semibold">Withdraw</span>
+                                    </button>
+                                    <button onClick={() => navigateTo('profile')} className="flex flex-col items-center gap-0.5 text-white hover:text-black active:text-black transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                        <span className="text-[9px] font-semibold">Account</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            );
+        };
+
+
+        // --- Profile Page Component ---
+        const ProfilePage = ({ currentUser, balance, navigateTo, handleLogout }) => {
+            return (
+                <div className="max-w-md mx-auto bg-[#0a0a0a] min-h-screen text-white p-4">
+                    <div className="flex items-center gap-2 mb-6">
+                        <button onClick={() => navigateTo('gameSelection')} className="p-2 rounded-full bg-gray-800 bg-opacity-50">
+                            <ArrowLeft className="w-5 h-5 text-white" />
+                        </button>
+                        <h2 className="text-xl font-bold text-yellow-300">Profile</h2>
+                    </div>
+
+                    <div className="flex flex-col items-center mb-8">
+                        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-yellow-400 mb-4">
+                            <img src="logo.avif" alt="Profile" className="w-full h-full object-cover" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-yellow-300">Zupwin</h3>
+                        <p className="text-sm text-gray-400 mt-1">{currentUser?.email || 'User'}</p>
+                    </div>
+
+                    <div className="card-3d p-4 mb-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-gray-400">Wallet Balance</span>
+                            <span className="text-xl font-bold text-yellow-300">₹{balance.toFixed(2)}</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => navigateTo('deposit')} className="flex-1 bg-green-600 py-2 rounded-lg font-bold text-sm hover:bg-green-700 transition-colors">Deposit</button>
+                            <button onClick={() => navigateTo('withdraw')} className="flex-1 bg-red-600 py-2 rounded-lg font-bold text-sm hover:bg-red-700 transition-colors">Withdraw</button>
+                        </div>
+                    </div>
+
+                    <div className="card-3d p-4 mb-4">
+                        <div className="flex justify-between items-center py-3 border-b border-gray-700">
+                            <span className="text-gray-400">Email</span>
+                            <span className="text-sm">{currentUser?.email || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-3 border-b border-gray-700">
+                            <span className="text-gray-400">User ID</span>
+                            <span className="text-sm truncate max-w-[180px]">{currentUser?.uid || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-3">
+                            <span className="text-gray-400">Account Created</span>
+                            <span className="text-sm">{currentUser?.metadata?.creationTime ? new Date(currentUser.metadata.creationTime).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                    </div>
+
+                    <div className="card-3d p-4 mb-4">
+                        <button onClick={() => navigateTo('history')} className="w-full text-left py-3 border-b border-gray-700 flex justify-between items-center">
+                            <span>Game History</span>
+                            <ArrowLeft className="w-4 h-4 rotate-180" />
+                        </button>
+                        <button onClick={() => navigateTo('deposit')} className="w-full text-left py-3 border-b border-gray-700 flex justify-between items-center">
+                            <span>Deposit</span>
+                            <ArrowLeft className="w-4 h-4 rotate-180" />
+                        </button>
+                        <button onClick={() => navigateTo('withdraw')} className="w-full text-left py-3 border-b border-gray-700 flex justify-between items-center">
+                            <span>Withdraw</span>
+                            <ArrowLeft className="w-4 h-4 rotate-180" />
+                        </button>
+                        <a href="https://wa.me/9520457366" target="_blank" rel="noopener noreferrer" className="w-full text-left py-3 flex justify-between items-center">
+                            <span>Customer Service</span>
+                            <ArrowLeft className="w-4 h-4 rotate-180" />
+                        </a>
+                    </div>
+
+                    <button
+                        onClick={handleLogout}
+                        className="w-full bg-red-600 py-3 rounded-lg font-bold text-white hover:bg-red-700 transition-colors"
+                    >
+                        Logout
+                    </button>
+                </div>
+            );
+        };
+
+        // --- Admin Panel Component ---
+        const AdminPanelPage = ({ users, deposits, withdrawals, updateUserBalance, updateDepositStatus, updateWithdrawalStatus, refreshAdminData, clearAllHistories, navigateTo, currentUser, isAdmin }) => {
+            const [tab, setTab] = React.useState('users');
+            const [loading, setLoading] = React.useState(false);
+            const [message, setMessage] = React.useState(null);
+            const [searchUser, setSearchUser] = React.useState('');
+            React.useEffect(() => {
+                if (!isAdmin) {
+                    navigateTo('gameSelection');
+                }
+            }, [isAdmin]);
+            const totalDeposits = deposits.filter(d=>d.status==='Completed').reduce((sum,d)=>sum+Number(d.amount||0),0);
+            const totalWithdrawals = withdrawals.filter(w=>w.status==='Completed').reduce((sum,w)=>sum+Number(w.amount||0),0);
+            const handleAdminAction = async (fn, successMsg) => {
+                setLoading(true); setMessage(null);
+                try { await fn(); setMessage({ type: 'success', text: successMsg }); refreshAdminData(); }
+                catch (e) { setMessage({ type: 'error', text: e.message || 'Error' }); }
+                setLoading(false);
+            };
+            return (
+                <div className="min-h-screen bg-[#0a0a0a] text-white p-2 flex flex-col items-center">
+                    <div className="w-full max-w-md mx-auto">
+                        <div className="flex items-center gap-2 mb-4">
+                            <button onClick={() => navigateTo('gameSelection')} className="p-2 rounded-full bg-gray-800 bg-opacity-50">
+                                <ArrowLeft className="w-5 h-5 text-white" />
+                            </button>
+                            <h1 className="text-xl font-bold text-yellow-300">Admin Panel</h1>
+                        </div>
+                        <div className="flex gap-1 flex-wrap mb-4">
+                            {['users','deposits','withdrawals','settings'].map(t => (
+                                <button key={t} className={`px-2 py-1 rounded-lg font-semibold text-xs transition-colors ${tab===t?'bg-yellow-400 text-black':'bg-gray-800 text-white hover:bg-yellow-500'}`} onClick={()=>setTab(t)}>{t.charAt(0).toUpperCase()+t.slice(1)}</button>
+                            ))}
+                        </div>
+                        {message && <div className={`my-2 p-3 rounded text-center font-bold ${message.type==='success'?'bg-green-600 text-white':'bg-red-600 text-white'}`}>{message.text}</div>}
+                        {loading && <div className="my-2 text-center text-yellow-300 animate-pulse">Processing...</div>}
+                        {tab==='users' && (
+                            <div className="mt-6 flex flex-col gap-3">
+                                <h2 className="text-xl font-bold mb-2">Manage Users</h2>
+                                <input
+                                    type="text"
+                                    placeholder="Search by Email or Phone..."
+                                    className="mb-2 p-2 rounded bg-gray-800 text-white w-full text-xs"
+                                    value={searchUser || ''}
+                                    onChange={e => setSearchUser(e.target.value)}
+                                />
+                                {(users.filter(user => !searchUser || ((user.email && user.email.toLowerCase().includes(searchUser.toLowerCase())) || (user.phone && user.phone.includes(searchUser))))).map(user => (
+                                    <div key={user.uid} className="bg-gray-900 rounded-lg p-3 shadow flex flex-col gap-2 mb-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs font-semibold break-all">{user.email || user.phone}</span>
+                                            <span className="text-xs px-2 py-1 rounded bg-gray-800">Bal: ₹{user.balance}</span>
+                                        </div>
+                                        <div className="flex gap-2 items-center mt-1">
+                                            <input type="number" className="w-20 p-1 rounded bg-gray-800 text-white text-xs" defaultValue={user.balance} onBlur={e=>handleAdminAction(()=>updateUserBalance(user.uid, parseFloat(e.target.value)), 'Balance updated!')} />
+                                            <button onClick={()=>handleAdminAction(()=>window.toggleAdmin(user.uid, !user.isAdmin), user.isAdmin?'Admin removed!':'Admin added!')} className={`px-2 py-1 rounded text-xs ${user.isAdmin?'bg-yellow-400 text-black':'bg-gray-700 text-white hover:bg-yellow-500'}`}>{user.isAdmin?'Remove Admin':'Make Admin'}</button>
+                                            <button onClick={()=>handleAdminAction(()=>window.deleteUser(user.uid), 'User deleted!')} className="px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700">Delete</button>
+                                        </div>
+                                        <div className="text-center mt-1">{user.isAdmin ? <span className="bg-yellow-400 text-black px-2 py-1 rounded text-xs">Admin</span> : <span className="bg-gray-700 text-white px-2 py-1 rounded text-xs">User</span>}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {tab==='deposits' && (
+                            <div className="mt-6 flex flex-col gap-3">
+                                <h2 className="text-xl font-bold mb-2">Manage Deposits</h2>
+                                {(deposits.filter(dep => dep.status === 'Pending')).map((dep,i) => (
+                                    <div key={i} className="bg-gray-900 rounded-lg p-3 shadow flex flex-col gap-2 mb-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs font-semibold break-all">{dep.upiId}</span>
+                                            <span className="text-xs px-2 py-1 rounded bg-gray-800">₹{dep.amount}</span>
+                                            <span className="text-xs px-2 py-1 rounded bg-gray-800">{dep.status}</span>
+                                        </div>
+                                        {dep.imageName && (
+                                            <div className="flex justify-center mt-1"><img src={dep.imageUrl || ''} alt="screenshot" className="w-20 h-20 object-contain bg-white rounded" onError={e=>e.target.style.display='none'} /></div>
+                                        )}
+                                        <div className="flex gap-2 mt-2">
+                                            <button onClick={()=>handleAdminAction(()=>window.approveDeposit(dep, i), 'Deposit approved!')} className="flex-1 px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs">Approve</button>
+                                            <button onClick={()=>handleAdminAction(()=>window.rejectDeposit(dep, i), 'Deposit rejected!')} className="flex-1 px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs">Reject</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {tab==='withdrawals' && (
+                            <div className="mt-6 flex flex-col gap-3">
+                                <h2 className="text-xl font-bold mb-2">Manage Withdrawals</h2>
+                                {(withdrawals.filter(w => w.status === 'Pending')).length === 0 ? (
+                                    <p className="text-center opacity-70">No withdrawal requests yet.</p>
+                                ) : (
+                                    withdrawals.filter(w => w.status === 'Pending').map((w,i) => (
+                                        <div key={i} className="bg-gray-900 rounded-lg p-3 shadow flex flex-col gap-2 mb-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-semibold break-all">{w.upiId}</span>
+                                                <span className="text-xs px-2 py-1 rounded bg-gray-800">₹{w.amount}</span>
+                                                <span className={`text-xs px-2 py-1 rounded bg-yellow-400 bg-opacity-20 text-yellow-800`}>{w.status || 'Pending'}</span>
+                                            </div>
+                                            <div className="flex gap-2 mt-2">
+                                                <button onClick={()=>handleAdminAction(()=>window.approveWithdrawal(w, i), 'Withdrawal approved!')} className="flex-1 px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs">Approve</button>
+                                                <button onClick={()=>handleAdminAction(()=>window.rejectWithdrawal(w, i), 'Withdrawal rejected!')} className="flex-1 px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs">Reject</button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                        {tab==='settings' && (
+                            <div className="mt-6 flex flex-col items-center">
+                                <h2 className="text-xl font-bold mb-2">Settings</h2>
+                                <button onClick={()=>handleAdminAction(clearAllHistories, 'History cleared!')} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Clear All History Data (Keep Balances, Last 10 Only)</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [authenticated, setAuthenticated] = React.useState(false);
+            const [currentPage, setCurrentPage] = React.useState('login');
+            const [showInstallMessage, setShowInstallMessage] = React.useState(false);
+            const [navigationHistory, setNavigationHistory] = React.useState(['login']);
+            const [isAdmin, setIsAdmin] = React.useState(false);
+            const [allUsers, setAllUsers] = React.useState([]);
+            const [allDeposits, setAllDeposits] = React.useState([]);
+            const [allWithdrawals, setAllWithdrawals] = React.useState([]);
+
+            // Handle PWA installation
+            React.useEffect(() => {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    window.deferredPrompt = e;
+                });
+
+                window.addEventListener('appinstalled', () => {
+                    setShowInstallMessage(true);
+                    setTimeout(() => {
+                        setShowInstallMessage(false);
+                    }, 3000);
+                });
+            }, []);
+
+            // Handle Android back button
+            React.useEffect(() => {
+                const handleBackButton = async (event) => {
+                    if (navigationHistory.length > 1) {
+                        event.preventDefault();
+                        await showLoader(); // Show loader before navigation
+                        const newHistory = [...navigationHistory];
+                        newHistory.pop(); // Remove current page
+                        const previousPage = newHistory[newHistory.length - 1];
+                        setNavigationHistory(newHistory);
+                        setCurrentPage(previousPage);
+                    }
+                };
+
+                window.addEventListener('popstate', handleBackButton);
+                return () => window.removeEventListener('popstate', handleBackButton);
+            }, [navigationHistory]);
+
+            const navigateTo = async (page) => {
+                await showLoader();
+                setCurrentPage(page);
+                setNavigationHistory(prev => [...prev, page]);
+                // Add to browser history
+                window.history.pushState({ page }, '', `#${page}`);
+            };
+
+            const [historyInitialTab, setHistoryInitialTab] = React.useState('game');
+            const [currentUser, setCurrentUser] = React.useState(null);
+            const [balance, setBalance] = React.useState(0);
+            const [gameHistory, setGameHistory] = React.useState([]);
+            const [depositHistory, setDepositHistory] = React.useState([]);
+            const [withdrawHistory, setWithdrawHistory] = React.useState([]);
+
+            // Function to play transaction success sound
+            const playTransactionSound = () => {
+                const audio = new Audio('dw.mp3');
+                audio.play().catch(error => console.log('Error playing audio:', error));
+            };
+
+            // Function to play error sound
+            const playErrorSound = () => {
+                const audio = new Audio('error.mp3');
+                audio.play().catch(error => console.log('Error playing audio:', error));
+            };
+
+            // Listen for auth state changes
+            React.useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        setCurrentUser(user);
+                        setAuthenticated(true);
+                        // Load user data from Firestore
+                        loadUserData(user.uid, user.email);
+                    } else {
+                        setCurrentUser(null);
+                        setAuthenticated(false);
+                        setBalance(0);
+                        setGameHistory([]);
+                        setDepositHistory([]);
+                        setWithdrawHistory([]);
+                        setIsAdmin(false);
+                    }
+                });
+
+                return () => unsubscribe();
+            }, []);
+
+            // Function to load user data from Firestore
+            const loadUserData = async (userId, email) => {
+                try {
+                    const userDoc = await db.collection('users').doc(userId).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        setBalance(userData.balance || 0);
+                        setGameHistory(userData.gameHistory || []);
+                        setDepositHistory(userData.depositHistory || []);
+                        setWithdrawHistory(userData.withdrawHistory || []);
+                        setIsAdmin(userData.isAdmin || email === 'moghaeashu@gmail.com');
+                    }
+                } catch (error) {
+                    console.error("Error loading user data:", error);
+                }
+            };
+
+            // Function to update user data in Firestore
+            const updateUserData = async (updates) => {
+                if (!currentUser) return;
+                
+                try {
+                    await db.collection('users').doc(currentUser.uid).update(updates);
+                } catch (error) {
+                    console.error("Error updating user data:", error);
+                }
+            };
+
+            // Update Firestore when balance changes
+            React.useEffect(() => {
+                if (currentUser) {
+                    updateUserData({ balance });
+                }
+            }, [balance]);
+
+            // Update Firestore when game history changes
+            React.useEffect(() => {
+                if (currentUser) {
+                    updateUserData({ gameHistory });
+                }
+            }, [gameHistory]);
+
+            // Update Firestore when deposit history changes
+            React.useEffect(() => {
+                if (currentUser) {
+                    updateUserData({ depositHistory });
+                }
+            }, [depositHistory]);
+
+            // Update Firestore when withdraw history changes
+            React.useEffect(() => {
+                if (currentUser) {
+                    updateUserData({ withdrawHistory });
+                }
+            }, [withdrawHistory]);
+
+            // Handlers for state updates from child components
+            const addDepositToHistory = (deposit) => {
+                setDepositHistory(prev => [deposit, ...prev]);
+                playTransactionSound(); // Play sound on successful deposit
+            };
+
+            const addWithdrawToHistory = (withdraw) => {
+                setWithdrawHistory(prev => [withdraw, ...prev]);
+                playTransactionSound(); // Play sound on successful withdrawal
+            };
+
+            const handleDepositError = () => {
+                playErrorSound(); // Play error sound on deposit mistakes
+            };
+
+            const handleWithdrawError = () => {
+                playErrorSound(); // Play error sound on withdrawal mistakes
+            };
+
+            const handleLogout = async () => {
+                try {
+                    await showLoader();
+                    await auth.signOut();
+                    setCurrentUser(null);
+                    setAuthenticated(false);
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                }
+            };
+
+            // Fetch all users, deposits, withdrawals for admin
+            React.useEffect(() => {
+                if (isAdmin) {
+                    // Fetch users
+                    db.collection('users').get().then(snapshot => {
+                        const users = [];
+                        snapshot.forEach(doc => users.push({ uid: doc.id, ...doc.data() }));
+                        setAllUsers(users);
+                    });
+                    // Fetch deposits/withdrawals (simulate from all users)
+                    db.collection('users').get().then(snapshot => {
+                        let deposits = [], withdrawals = [];
+                        snapshot.forEach(doc => {
+                            const d = doc.data().depositHistory || [];
+                            d.forEach(dep => { if (dep.status === 'Pending') deposits.push({ ...dep, user: doc.id }); });
+                            const w = doc.data().withdrawHistory || [];
+                            w.forEach(wd => { if (wd.status === 'Pending') withdrawals.push({ ...wd, user: doc.id }); });
+                        });
+                        setAllDeposits(deposits);
+                        setAllWithdrawals(withdrawals);
+                    });
+                }
+            }, [isAdmin]);
+
+            // Admin actions
+            const updateUserBalance = (uid, newBal) => {
+                db.collection('users').doc(uid).update({ balance: newBal });
+                setAllUsers(users => users.map(u => u.uid === uid ? { ...u, balance: newBal } : u));
+            };
+            // Update deposit status in Firestore
+            const updateDepositStatus = (idx, status, dep) => {
+                setAllDeposits(deps => deps.map((d,i) => i===idx ? { ...d, status } : d));
+                // Find the user and update depositHistory
+                db.collection('users').doc(dep.user).get().then(docSnap => {
+                    if (!docSnap.exists) return;
+                    const userData = docSnap.data();
+                    const depositHistory = (userData.depositHistory || []).map(d => {
+                        if (d.timestamp === dep.timestamp && d.amount === dep.amount) {
+                            return { ...d, status };
+                        }
+                        return d;
+                    });
+                    db.collection('users').doc(dep.user).update({ depositHistory });
+                });
+            };
+            // Update withdrawal status in Firestore
+            const updateWithdrawalStatus = (idx, status, w) => {
+                setAllWithdrawals(wds => wds.map((wd,i) => i===idx ? { ...wd, status } : wd));
+                db.collection('users').doc(w.user).get().then(docSnap => {
+                    if (!docSnap.exists) return;
+                    const userData = docSnap.data();
+                    const withdrawHistory = (userData.withdrawHistory || []).map(wd => {
+                        if (wd.timestamp === w.timestamp && wd.amount === w.amount) {
+                            return { ...wd, status };
+                        }
+                        return wd;
+                    });
+                    db.collection('users').doc(w.user).update({ withdrawHistory });
+                });
+            };
+
+            // Admin helpers
+            window.deleteUser = async (uid) => {
+                if (!window.confirm('Are you sure you want to delete this user?')) return;
+                await db.collection('users').doc(uid).delete();
+                refreshAdminData();
+            };
+            window.toggleAdmin = async (uid, makeAdmin) => {
+                await db.collection('users').doc(uid).update({ isAdmin: makeAdmin });
+                refreshAdminData();
+            };
+            window.approveDeposit = async (dep, idx) => {
+                const userRef = db.collection('users').doc(dep.user);
+                const userDoc = await userRef.get();
+                if (!userDoc.exists) return;
+                const userData = userDoc.data();
+                let depositHistory = (userData.depositHistory || []).map(d => {
+                    if (d.timestamp === dep.timestamp && d.amount === dep.amount) {
+                        return { ...d, status: 'Completed' };
+                    }
+                    return d;
+                });
+                depositHistory = depositHistory.slice(0, 10);
+                const newBalance = (userData.balance || 0) + Number(dep.amount);
+                await userRef.update({ depositHistory, balance: newBalance });
+                // Remove from admin panel (pending list)
+                window.removeDepositFromAdmin(idx);
+                window.refreshAdminData();
+            };
+            window.rejectDeposit = async (dep, idx) => {
+                const userRef = db.collection('users').doc(dep.user);
+                const userDoc = await userRef.get();
+                if (!userDoc.exists) return;
+                const userData = userDoc.data();
+                let depositHistory = (userData.depositHistory || []).map(d => {
+                    if (d.timestamp === dep.timestamp && d.amount === dep.amount) {
+                        return { ...d, status: 'Rejected' };
+                    }
+                    return d;
+                });
+                depositHistory = depositHistory.slice(0, 10);
+                await userRef.update({ depositHistory });
+                window.removeDepositFromAdmin(idx);
+                window.refreshAdminData();
+            };
+            window.approveWithdrawal = async (w, idx) => {
+                const userRef = db.collection('users').doc(w.user);
+                const userDoc = await userRef.get();
+                if (!userDoc.exists) return;
+                const userData = userDoc.data();
+                let withdrawHistory = (userData.withdrawHistory || []).map(wd => {
+                    if (wd.timestamp === w.timestamp && wd.amount === w.amount) {
+                        return { ...wd, status: 'Completed' };
+                    }
+                    return wd;
+                });
+                withdrawHistory = withdrawHistory.slice(0, 10);
+                await userRef.update({ withdrawHistory });
+                window.removeWithdrawalFromAdmin(idx);
+                window.refreshAdminData();
+            };
+            window.rejectWithdrawal = async (w, idx) => {
+                const userRef = db.collection('users').doc(w.user);
+                const userDoc = await userRef.get();
+                if (!userDoc.exists) return;
+                const userData = userDoc.data();
+                let withdrawHistory = (userData.withdrawHistory || []).map(wd => {
+                    if (wd.timestamp === w.timestamp && wd.amount === w.amount) {
+                        return { ...wd, status: 'Rejected' };
+                    }
+                    return wd;
+                });
+                withdrawHistory = withdrawHistory.slice(0, 10);
+                await userRef.update({ withdrawHistory });
+                window.removeWithdrawalFromAdmin(idx);
+                window.refreshAdminData();
+            };
+            // Helper functions to remove from admin panel lists
+            window.removeDepositFromAdmin = (idx) => {
+                if (typeof idx === 'number' && window.setAllDeposits) {
+                    window.setAllDeposits(deps => deps.filter((_, i) => i !== idx));
+                }
+            };
+            window.removeWithdrawalFromAdmin = (idx) => {
+                if (typeof idx === 'number' && window.setAllWithdrawals) {
+                    window.setAllWithdrawals(wds => wds.filter((_, i) => i !== idx));
+                }
+            };
+            // In App, expose setAllDeposits and setAllWithdrawals to window
+            window.setAllDeposits = setAllDeposits;
+            window.setAllWithdrawals = setAllWithdrawals;
+            function refreshAdminData() {
+                if (currentUser && currentUser.email === 'moghaeashu@gmail.com') {
+                    db.collection('users').get().then(snapshot => {
+                        const users = [];
+                        snapshot.forEach(doc => users.push({ uid: doc.id, ...doc.data() }));
+                        setAllUsers(users);
+                    });
+                    db.collection('users').get().then(snapshot => {
+                        let deposits = [], withdrawals = [];
+                        snapshot.forEach(doc => {
+                            const d = doc.data().depositHistory || [];
+                            d.forEach(dep => deposits.push({ ...dep, user: doc.id }));
+                            const w = doc.data().withdrawHistory || [];
+                            w.forEach(wd => withdrawals.push({ ...wd, user: doc.id }));
+                        });
+                        setAllDeposits(deposits);
+                        setAllWithdrawals(withdrawals);
+                    });
+                }
+            }
+            window.refreshAdminData = refreshAdminData;
+            window.clearAllHistories = async () => {
+                if (!window.confirm('Are you sure you want to clear all history data for all users? This will keep only the last 10 deposit, withdrawal, and game history entries per user.')) return;
+                const usersSnap = await db.collection('users').get();
+                const batch = db.batch();
+                usersSnap.forEach(doc => {
+                    const userRef = db.collection('users').doc(doc.id);
+                    const data = doc.data();
+                    const depositHistory = (data.depositHistory || []).slice(0, 10);
+                    const withdrawHistory = (data.withdrawHistory || []).slice(0, 10);
+                    const gameHistory = (data.gameHistory || []).slice(0, 10);
+                    batch.update(userRef, { depositHistory, withdrawHistory, gameHistory });
+                });
+                await batch.commit();
+                window.refreshAdminData();
+            };
+
+            // In App, add auto-refresh for user and admin data
+            // For user data (balance, history):
+            React.useEffect(() => {
+                if (!currentUser) return;
+                const interval = setInterval(() => {
+                    loadUserData(currentUser.uid, currentUser.email);
+                }, 5000); // 5 seconds
+                return () => clearInterval(interval);
+            }, [currentUser]);
+            // For admin data (users, deposits, withdrawals):
+            React.useEffect(() => {
+                if (isAdmin) {
+                    const fetchAdminData = () => {
+                        db.collection('users').get().then(snapshot => {
+                            const users = [];
+                            snapshot.forEach(doc => users.push({ uid: doc.id, ...doc.data() }));
+                            setAllUsers(users);
+                        });
+                        db.collection('users').get().then(snapshot => {
+                            let deposits = [], withdrawals = [];
+                            snapshot.forEach(doc => {
+                                const d = doc.data().depositHistory || [];
+                                d.forEach(dep => { if (dep.status) deposits.push({ ...dep, user: doc.id }); });
+                                const w = doc.data().withdrawHistory || [];
+                                w.forEach(wd => { if (wd.status === 'Pending') withdrawals.push({ ...wd, user: doc.id }); });
+                            });
+                            setAllDeposits(deposits);
+                            setAllWithdrawals(withdrawals);
+                        });
+                    };
+                    fetchAdminData();
+                    const interval = setInterval(fetchAdminData, 5000); // 5 seconds
+                    return () => clearInterval(interval);
+                }
+            }, [isAdmin]);
+
+            if (!authenticated) {
+                if (currentPage === 'login') {
+                    return <LoginPage setAuthenticated={setAuthenticated} navigateToRegister={() => navigateTo('register')} navigateToLanding={() => window.location.href = 'index.html'} />;
+                } else {
+                    return <RegisterPage setAuthenticated={setAuthenticated} navigateToLogin={() => navigateTo('login')} />;
+                }
+            }
+
+            return (
+                <>
+                    {(() => {
+                        switch (currentPage) {
+                            case 'gameSelection':
+                                return <GameSelectionPage balance={balance} navigateTo={navigateTo} handleLogout={handleLogout} isAdmin={isAdmin} currentUser={currentUser} />;
+                            case 'colorPrediction':
+                                return <ColorPredictionGame
+                                    balance={balance}
+                                    setBalance={setBalance}
+                                    navigateTo={navigateTo}
+                                    gameHistory={gameHistory}
+                                    setGameHistory={setGameHistory}
+                                    addDepositToHistory={addDepositToHistory}
+                                    addWithdrawToHistory={addWithdrawToHistory}
+                                    currentUser={currentUser}
+                                    updateUserData={updateUserData}
+                                />;
+                            case 'deposit':
+                                return <DepositPage 
+                                    setBalance={setBalance} 
+                                    navigateTo={navigateTo} 
+                                    addDepositToHistory={addDepositToHistory}
+                                    onError={handleDepositError}
+                                />;
+                            case 'withdraw':
+                                return <WithdrawPage 
+                                    balance={balance} 
+                                    setBalance={setBalance} 
+                                    navigateTo={navigateTo} 
+                                    addWithdrawToHistory={addWithdrawToHistory}
+                                    onError={handleWithdrawError}
+                                />;
+                            case 'history':
+                                return <HistoryPage navigateTo={navigateTo} gameHistory={gameHistory} depositHistory={depositHistory} withdrawHistory={withdrawHistory} initialTab={historyInitialTab} />;
+                            case 'mines':
+                                return <MinesGame balance={balance} setBalance={setBalance} navigateTo={navigateTo} />;
+                            case 'profile':
+                                return <ProfilePage currentUser={currentUser} balance={balance} navigateTo={navigateTo} handleLogout={handleLogout} />;
+                            case 'admin':
+                                return <AdminPanelPage
+                                    users={allUsers}
+                                    deposits={allDeposits}
+                                    withdrawals={allWithdrawals}
+                                    updateUserBalance={updateUserBalance}
+                                    updateDepositStatus={updateDepositStatus}
+                                    updateWithdrawalStatus={updateWithdrawalStatus}
+                                    refreshAdminData={window.refreshAdminData}
+                                    clearAllHistories={window.clearAllHistories}
+                                    navigateTo={navigateTo}
+                                    currentUser={currentUser}
+                                    isAdmin={isAdmin}
+                                />;
+                            default:
+                                return <GameSelectionPage balance={balance} navigateTo={navigateTo} handleLogout={handleLogout} isAdmin={isAdmin} currentUser={currentUser} />;
+                        }
+                    })()}
+                </>
+            );
+        };
+
+        // Loader Component
+        const Loader = () => (
+            <div className="loader-container">
+                <div className="loader-content">
+                    <div className="loader-glow"></div>
+                    <div className="loader-ring"></div>
+                    <div className="loader-logo">
+                        <img src="logo.avif" alt="Loading..." />
+                    </div>
+                </div>
+            </div>
+        );
+
+        // Function to show loader for 2 seconds
+        const showLoader = () => {
+            return new Promise((resolve) => {
+                const loaderRoot = document.createElement('div');
+                loaderRoot.id = 'loader-root';
+                document.body.appendChild(loaderRoot);
+                
+                ReactDOM.render(<Loader />, loaderRoot);
+                
+                setTimeout(() => {
+                    ReactDOM.unmountComponentAtNode(loaderRoot);
+                    document.body.removeChild(loaderRoot);
+                    resolve();
+                }, 2000);
+            });
+        };
+
+        // Preloader function
+        const showPreloader = async () => {
+            const loaderRoot = document.createElement('div');
+            loaderRoot.id = 'loader-root';
+            document.body.appendChild(loaderRoot);
+            
+            ReactDOM.render(<Loader />, loaderRoot);
+            
+            // Wait for 2 seconds
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Remove loader
+            ReactDOM.unmountComponentAtNode(loaderRoot);
+            document.body.removeChild(loaderRoot);
+            
+            // Render the main app
+            ReactDOM.render(<App />, document.getElementById('root'));
+        };
+
+        // Start the app with preloader
+        showPreloader();
+
+       (function() {
+    // Right-click disable
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Keydown blocks: F12, Ctrl+Shift+I/J/C/U/S
+    document.addEventListener('keydown', e => {
+        if (e.keyCode === 123) e.preventDefault(); // F12
+        if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) e.preventDefault(); // Inspect/Console
+        if (e.ctrlKey && e.keyCode === 85) e.preventDefault(); // View Source
+        if (e.ctrlKey && e.keyCode === 83) e.preventDefault(); // Save
+    }, false);
+
+    // Text selection, copy, cut, paste disable
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('cut', e => e.preventDefault());
+    document.addEventListener('paste', e => e.preventDefault());
+
+    // DevTools detection (window resize trick)
+    let devtoolsOpen = false;
+    setInterval(() => {
+        const outerW = window.outerWidth;
+        const innerW = window.innerWidth;
+        const outerH = window.outerHeight;
+        const innerH = window.innerHeight;
+        if ((outerW - innerW > 160 || outerH - innerH > 160) && !devtoolsOpen) {
+            devtoolsOpen = true;
+            alert('DevTools open mat karo bhai!');
+            location.reload();
+        } else if (outerW - innerW < 160 && outerH - innerH < 160) {
+            devtoolsOpen = false;
+        }
+    }, 500);
+
+    // Drag image/text disable
+    document.addEventListener('dragstart', e => e.preventDefault());
+
+    console.log('DevTools protection enabled!'); // Self-clear console hint
+})();
+
+        
+    </script>
+</body>
+</html>

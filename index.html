@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Zupwin - The Ultimate Gaming Platform</title>
+    <link rel="icon" href="logo.avif" type="image/avif">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #0a0a0a;
+    color: #e5e7eb;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-image: radial-gradient(circle at top right, rgba(250, 204, 21, 0.1), transparent 40%),
+                      radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.1), transparent 50%);
+    background-attachment: fixed;
+    z-index: 1;
+    position: relative;
+    cursor: none;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+    z-index: 2;
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: transparent;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+}
+
+.logo img {
+    width: 50px;
+    height: 50px;
+    margin-right: 15px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.logo h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #facc15;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-login {
+    background-color: #facc15;
+    color: #111827;
+    border: 1px solid #eab308;
+}
+
+.btn-login:hover {
+    background-color: #eab308;
+    transform: translateY(-2px);
+}
+
+.desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.desktop-nav a {
+    color: #e5e7eb;
+    text-decoration: none;
+    font-weight: 600;
+    position: relative;
+    transition: color 0.3s;
+}
+
+.desktop-nav a:not(.btn-login) {
+    padding: 5px 0;
+}
+
+.desktop-nav a:not(.btn-login)::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #facc15;
+    transition: width 0.3s ease-in-out;
+}
+
+.desktop-nav a:not(.btn-login):hover::after {
+    width: 100%;
+}
+
+.desktop-nav a:not(.btn-login):hover {
+    color: #facc15;
+}
+
+.mobile-nav {
+    display: none;
+}
+
+.hamburger {
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 10001;
+}
+
+.hamburger .line {
+    width: 28px;
+    height: 3px;
+    background-color: #e5e7eb;
+    border-radius: 3px;
+    margin: 5px 0;
+    transition: all 0.3s ease-in-out;
+}
+
+.mobile-menu {
+    position: absolute;
+    top: 70px;
+    right: 0;
+    background-color: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(250, 204, 21, 0.1);
+    border-radius: 16px;
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 10000;
+}
+
+.mobile-menu a {
+    color: #e5e7eb;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.mobile-menu .btn-login {
+    margin-top: 10px;
+    background-color: #facc15;
+    color: #111827;
+}
+
+/* Hero Section */
+.hero {
+    display: flex;
+    align-items: center;
+    padding: 80px 0;
+    text-align: left;
+}
+
+.hero-text {
+    flex: 1;
+}
+
+.hero-text h2 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 20px;
+}
+
+.hero-text p {
+    font-size: 18px;
+    color: #d1d5db;
+    margin-bottom: 30px;
+}
+
+.btn-primary {
+    background: linear-gradient(145deg, #facc15, #eab308);
+    color: black;
+    padding: 15px 30px;
+    font-size: 18px;
+    border-bottom: 4px solid #ca8a04;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(250, 204, 21, 0.2);
+}
+
+.hero-image-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1500px;
+}
+
+.hero-logo {
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(250, 204, 21, 0.4), 0 0 40px rgba(250, 204, 21, 0.2), 0 0 60px rgba(250, 204, 21, 0.1);
+    animation: float3D 10s ease-in-out infinite;
+}
+
+@keyframes float3D {
+    0% {
+        transform: translateZ(0) rotateY(0deg);
+    }
+    50% {
+        transform: translateZ(100px) rotateY(180deg);
+    }
+    100% {
+        transform: translateZ(0) rotateY(360deg);
+    }
+}
+
+.hero-image {
+    flex: 1;
+    text-align: center;
+}
+
+.hero-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 24px;
+}
+
+
+/* Features Section */
+.features {
+    padding: 80px 0;
+    text-align: center;
+}
+
+.features h2 {
+    font-size: 36px;
+    margin-bottom: 50px;
+}
+
+.feature-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.card {
+    background-color: rgba(20, 20, 20, 0.5);
+    backdrop-filter: blur(12px); /* Increased blur */
+    border: 1px solid rgba(250, 204, 21, 0.15); /* Slightly more visible border */
+    border-radius: 24px;
+    padding: 40px; /* More padding */
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* More bouncy transition */
+    transform: perspective(1000px) rotateY(15deg);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), -5px 0 15px rgba(250, 204, 21, 0.05);
+}
+
+.card:hover {
+    transform: perspective(1000px) rotateY(0deg) translateY(-20px) scale(1.05);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 20px rgba(250, 204, 21, 0.2);
+}
+
+.card img {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+}
+
+.card img.card-game-image {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.card h3 {
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: #facc15;
+}
+
+.card p {
+    color: #d1d5db;
+    line-height: 1.6; /* Improved readability */
+}
+
+
+/* How to Start Section */
+.how-to-start {
+    padding: 80px 0;
+    text-align: center;
+}
+
+.how-to-start h2 {
+    font-size: 36px;
+    margin-bottom: 50px;
+}
+
+.steps {
+    display: flex;
+    justify-content: space-around;
+    gap: 30px;
+}
+
+.step {
+    flex: 1;
+}
+
+.step span {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    line-height: 50px;
+    border-radius: 50%;
+    background-color: #facc15;
+    color: #111827;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    border: 2px solid #eab308;
+}
+
+.step h3 {
+    font-size: 22px;
+    margin-bottom: 10px;
+}
+
+
+/* Footer */
+.footer {
+    padding: 40px 0;
+    text-align: center;
+    border-top: 1px solid rgba(250, 204, 21, 0.1);
+    margin-top: 50px;
+}
+
+.footer-links {
+    margin-top: 10px;
+}
+
+.footer-links a {
+    color: #d1d5db;
+    text-decoration: none;
+    margin: 0 10px;
+    transition: color 0.3s;
+}
+
+.footer-links a:hover {
+    color: #facc15;
+}
+
+/* Why Choose Us Section */
+.why-choose-us {
+    padding: 80px 0;
+    text-align: center;
+}
+
+.why-choose-us h2 {
+    font-size: 36px;
+    margin-bottom: 50px;
+}
+
+.reason-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.reason-card {
+    background: linear-gradient(145deg, #27272a, #18181b);
+    border: 1px solid rgba(250, 204, 21, 0.1);
+    border-radius: 16px;
+    padding: 30px;
+    transition: all 0.3s ease;
+    transform-style: preserve-3d;
+}
+
+.reason-card:hover {
+    transform: translateY(-10px);
+    border-color: rgba(250, 204, 21, 0.4);
+}
+
+.reason-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+    display: inline-block;
+    animation: float 3s ease-in-out infinite;
+}
+
+.reason-card h3 {
+    font-size: 22px;
+    color: #facc15;
+    margin-bottom: 15px;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0px); }
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .hero {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .hero-text {
+        margin-bottom: 50px;
+    }
+
+    .hero-logo {
+        width: 250px;
+        height: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .steps {
+        flex-direction: column;
+        gap: 50px;
+    }
+
+    .hero-text h2 {
+        font-size: 36px;
+    }
+
+    .features h2, .how-to-start h2, .why-choose-us h2 {
+        font-size: 30px;
+    }
+
+    .card {
+        transform: perspective(1000px) rotateY(0deg); /* Disable 3D tilt on mobile for better UX */
+        padding: 30px;
+    }
+
+    .card:hover {
+        transform: translateY(-10px) scale(1.03); /* Simpler hover effect on mobile */
+    }
+
+    .desktop-nav {
+        display: none;
+    }
+
+    .mobile-nav {
+        display: block;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-text h2 {
+        font-size: 30px;
+    }
+
+    .hero-text p {
+        font-size: 16px;
+    }
+
+    .btn-primary {
+        padding: 12px 25px;
+        font-size: 16px;
+    }
+
+    .hero-logo {
+        width: 200px;
+        height: 200px;
+    }
+}
+
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+/* Testimonials Section */
+.testimonials {
+    padding: 80px 0;
+    text-align: center;
+}
+
+.testimonials h2 {
+    font-size: 36px;
+    margin-bottom: 50px;
+}
+
+.testimonial-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.testimonial-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 30px;
+    backdrop-filter: blur(8px);
+}
+
+.testimonial-card p {
+    font-style: italic;
+    color: #d1d5db;
+    margin-bottom: 20px;
+}
+
+.testimonial-card span {
+    font-weight: 600;
+    color: #facc15;
+}
+
+.cursor-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #facc15;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    z-index: 9999;
+    pointer-events: none;
+    transition: transform 0.2s ease-in-out;
+}
+
+.cursor-outline {
+    width: 30px;
+    height: 30px;
+    border: 2px solid #facc15;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    z-index: 9998;
+    pointer-events: none;
+    transition: all 0.3s ease-out;
+}
+
+/* Loader Styles */
+.loader-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10002;
+    transition: opacity 0.5s ease;
+}
+
+.loader-content {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.loader-logo {
+    width: 80px;
+    height: 80px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 4px solid #facc15;
+    padding: 5px;
+    animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+#root {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.5s ease-in;
+}
+
+#root.visible {
+    visibility: visible;
+    opacity: 1;
+}
+    </style>
+</head>
+<body>
+    <div id="loader" class="loader-container">
+        <div class="loader-content">
+            <img src="logo.avif" alt="Loading..." class="loader-logo" />
+        </div>
+    </div>
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+    <div id="particles-js"></div>
+    <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel">
+        function App() {
+            React.useEffect(() => {
+                const loader = document.getElementById('loader');
+                const root = document.getElementById('root');
+
+                setTimeout(() => {
+                    if (loader) {
+                        loader.style.transition = 'opacity 0.5s ease';
+                        loader.style.opacity = '0';
+                        setTimeout(() => loader.style.display = 'none', 500);
+                    }
+                    if (root) {
+                        root.classList.add('visible');
+                    }
+                }, 3000); // 3-second delay
+
+                particlesJS.load('particles-js', 'particles.json', function() {
+                    console.log('callback - particles.js config loaded');
+                });
+
+                const cursorDot = document.querySelector(".cursor-dot");
+                const cursorOutline = document.querySelector(".cursor-outline");
+
+                window.addEventListener("mousemove", function (e) {
+                    const posX = e.clientX;
+                    const posY = e.clientY;
+
+                    cursorDot.style.left = `${posX}px`;
+                    cursorDot.style.top = `${posY}px`;
+
+                    cursorOutline.animate({
+                        left: `${posX}px`,
+                        top: `${posY}px`
+                    }, { duration: 500, fill: "forwards" });
+                });
+            }, []);
+
+            return (
+                <div className="container">
+                    <Header />
+                    <Hero />
+                    <Features />
+                    <WhyChooseUs />
+                    <Testimonials />
+                    <HowToStart />
+                    <Footer />
+                </div>
+            );
+        }
+
+        function Header() {
+            const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+
+            return (
+                <header className="header">
+                    <div className="logo">
+                        <img src="logo.avif" alt="Zupwin Logo" />
+                        <h1>Zupwin</h1>
+                    </div>
+                    <nav className="desktop-nav">
+                        <a href="#">Home</a>
+                        <a href="#features">Games</a>
+                        <a href="#why-choose-us">Why Us</a>
+                        <a href="game.html" className="btn btn-login">Login</a>
+                        <a href="game.html" className="btn btn-login">Register</a>
+                    </nav>
+                    <div className="mobile-nav">
+                        <button className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                            <div className="line"></div>
+                            <div className="line"></div>
+                            <div className="line"></div>
+                        </button>
+                        {isMenuOpen && (
+                            <div className="mobile-menu">
+                                <a href="#">Home</a>
+                                <a href="#features">Games</a>
+                                <a href="#why-choose-us">Why Us</a>
+                                <a href="game.html" className="btn btn-login">Login</a>
+                                <a href="game.html" className="btn btn-login">Register</a>
+                            </div>
+                        )}
+                    </div>
+                </header>
+            );
+        }
+
+        function Hero() {
+            return (
+                <section className="hero">
+                    <div className="hero-text">
+                        <h2>Play, Predict, and Win Big!</h2>
+                        <p>Join the most exciting gaming platform. Test your skills in color prediction, mines, and more to win real rewards.</p>
+                        <a href="game.html" className="btn btn-primary">Login</a>
+                        <a href="game.html" className="btn btn-primary">Register</a>
+                    </div>
+                    <div className="hero-image-container">
+                        <img src="logo.avif" alt="Zupwin Logo" className="hero-logo" />
+                    </div>
+                </section>
+            );
+        }
+
+        function Features() {
+            return (
+                <section id="features" className="features">
+                    <h2>Our Awesome Games</h2>
+                    <div className="feature-cards">
+                        <div className="card">
+                            <img src="color.png" alt="Color Prediction Game" className="card-game-image"/>
+                            <h3>Color Prediction</h3>
+                            <p>A thrilling game of chance and intuition. Predict the winning color—Green, Violet, or Red—and if you're right, you could win big. Place your bet, wait for the countdown, and watch your rewards multiply!</p>
+                        </div>
+                        <div className="card">
+                            <img src="mine.png" alt="Mines Game" className="card-game-image"/>
+                            <h3>Mines</h3>
+                            <p>A strategic game of risk and reward. Uncover hidden gems on a grid while avoiding the mines. With each gem you find, your winnings increase. Dare to go further, or cash out before you hit a mine!</p>
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        function WhyChooseUs() {
+            return (
+                <section id="why-choose-us" className="why-choose-us">
+                    <h2>Why Choose Zupwin?</h2>
+                    <div className="reason-cards">
+                        <div className="reason-card">
+                            <div className="reason-icon">🚀</div>
+                            <h3>Instant Withdrawals</h3>
+                            <p>Get your winnings in your account within minutes. Our automated system ensures a fast and seamless withdrawal process.</p>
+                        </div>
+                        <div className="reason-card">
+                            <div className="reason-icon">🛡️</div>
+                            <h3>Secure & Fair</h3>
+                            <p>We use cutting-edge security and provably fair algorithms to ensure your data is safe and your gameplay is transparent.</p>
+                        </div>
+                        <div className="reason-card">
+                            <div className="reason-icon">🎧</div>
+                            <h3>24/7 Customer Support</h3>
+                            <p>Our dedicated support team is available around the clock to assist you with any questions or issues you may have.</p>
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        function Testimonials() {
+            return (
+                <section className="testimonials">
+                    <h2>What Our Players Say</h2>
+                    <div className="testimonial-cards">
+                        <div className="testimonial-card">
+                            <p>"Zupwin is hands-down the best gaming platform I've used. The games are fun, the withdrawals are instant, and I've actually won real money!"</p>
+                            <span>- Alex P.</span>
+                        </div>
+                        <div className="testimonial-card">
+                            <p>"I was skeptical at first, but the platform is legit. The color prediction game is my favorite. It's so simple and exciting."</p>
+                            <span>- Jessica M.</span>
+                        </div>
+                        <div className="testimonial-card">
+                            <p>"The customer support is amazing. I had a small issue, and they resolved it in minutes. Highly recommended for any gaming enthusiast."</p>
+                            <span>- David R.</span>
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        function HowToStart() {
+            return (
+                <section className="how-to-start">
+                    <h2>Get Started in 3 Easy Steps</h2>
+                    <div className="steps">
+                        <div className="step">
+                            <span>1</span>
+                            <h3>Create an Account</h3>
+                            <p>Quick and easy registration to get you started in minutes.</p>
+                        </div>
+                        <div className="step">
+                            <span>2</span>
+                            <h3>Add Funds</h3>
+                            <p>Securely deposit funds into your account using our trusted payment methods.</p>
+                        </div>
+                        <div className="step">
+                            <span>3</span>
+                            <h3>Start Playing</h3>
+                            <p>Choose your favorite game and start your journey to win big rewards.</p>
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        function Footer() {
+            return (
+                <footer className="footer">
+                    <p>&copy; 2024 Zupwin. All rights reserved.</p>
+                    <div className="footer-links">
+                        <a href="#">Privacy Policy</a>
+                        <a href="#">Terms of Service</a>
+                    </div>
+                </footer>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+
+      (function() {
+    // Right-click disable
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Keydown blocks: F12, Ctrl+Shift+I/J/C/U/S
+    document.addEventListener('keydown', e => {
+        if (e.keyCode === 123) e.preventDefault(); // F12
+        if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) e.preventDefault(); // Inspect/Console
+        if (e.ctrlKey && e.keyCode === 85) e.preventDefault(); // View Source
+        if (e.ctrlKey && e.keyCode === 83) e.preventDefault(); // Save
+    }, false);
+
+    // Text selection, copy, cut, paste disable
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('cut', e => e.preventDefault());
+    document.addEventListener('paste', e => e.preventDefault());
+
+    // DevTools detection (window resize trick)
+    let devtoolsOpen = false;
+    setInterval(() => {
+        const outerW = window.outerWidth;
+        const innerW = window.innerWidth;
+        const outerH = window.outerHeight;
+        const innerH = window.innerHeight;
+        if ((outerW - innerW > 160 || outerH - innerH > 160) && !devtoolsOpen) {
+            devtoolsOpen = true;
+            alert('DevTools open mat karo bhai!');
+            location.reload();
+        } else if (outerW - innerW < 160 && outerH - innerH < 160) {
+            devtoolsOpen = false;
+        }
+    }, 500);
+
+    // Drag image/text disable
+    document.addEventListener('dragstart', e => e.preventDefault());
+
+    console.log('DevTools protection enabled!'); // Self-clear console hint
+})();
+
+        
+    </script>
+</body>
+</html> 
